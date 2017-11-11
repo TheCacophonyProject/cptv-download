@@ -9,8 +9,8 @@ from dateutil.parser import parse as parsedate
 # Customise these to suit.
 
 # BASE_URL will typically be either one of:
-# https://browse.cacophony.org.nz
-# https://browse-test.cacophony.org.nz
+# https://api.cacophony.org.nz
+# https://api-test.cacophony.org.nz
 BASE_URL = 'http://localhost:9999'
 
 USER = 'bobby'
