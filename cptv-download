@@ -1,0 +1,87 @@
+#!/usr/bin/python
+
+from pathlib import Path
+
+from api import API
+from pool import Pool
+from dateutil.parser import parse as parsedate
+
+# Customise these to suit.
+
+# BASE_URL will typically be either one of:
+# https://browse.cacophony.org.nz
+# https://browse-test.cacophony.org.nz
+BASE_URL = 'http://localhost:9999'
+
+USER = 'bobby'
+PASSWORD = 'password'
+
+WORKERS = 4
+OUT_DIR = 'out'
+
+
+def main():
+    api = API(BASE_URL, USER, PASSWORD)
+
+    # query() takes a number of options to select the CPTV files to
+    # download.
+    rows = api.query()
+
+    pool = Pool(WORKERS, downloader, api, Path(OUT_DIR))
+    for row in rows:
+        pool.put(row)
+    pool.stop()
+
+
+def downloader(q, api, out_base):
+    while True:
+        r = q.get()
+        if r is None:
+            break
+
+        try:
+            tag_dir = get_tag_directory(r['Tags'])
+            if not tag_dir:
+                continue
+
+            print("downloading: " + format_row(r))
+
+            dt = parsedate(r['recordingDateTime'])
+            file_base = dt.strftime("%Y%m%d-%H%M%S") + "-" + r['Device']['devicename']
+            out_dir = out_base / tag_dir
+            out_dir.mkdir(parents=True, exist_ok=True)
+
+            path_base = str(out_dir / file_base)
+            iter_to_file(path_base + '.cptv', api.download_cptv(r['id']))
+            iter_to_file(path_base + '.mp4', api.download_mp4(r['id']))
+        finally:
+            q.task_done()
+
+
+def get_tag_directory(tags):
+    """Determine the directory store videos in, returning None if not sure.
+
+    Punts on videos with multiple tags or no tags.
+    """
+    if tags is None or len(tags) != 1:
+        return None
+
+    tag = tags[0]
+    if tag['event'] == 'false positive':
+        return 'false-positive'
+    return tag['animal']
+
+
+def format_row(row):
+    return "{} {} {}s".format(
+        row['id'], row['Device']['devicename'], row['duration'])
+
+
+def iter_to_file(filename, source):
+    with open(filename, "wb") as f:
+        for chunk in source:
+            f.write(chunk)
+
+
+if __name__ == '__main__':
+    main()
