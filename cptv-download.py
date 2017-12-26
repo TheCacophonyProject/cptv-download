@@ -3,7 +3,7 @@
 from pathlib import Path
 import os
 
-import time
+import json
 import datetime
 
 from api import API
@@ -82,8 +82,6 @@ class CPTVDownloader:
             if r is None:
                 break
 
-            x = None
-
             try:
                 tag_dir = get_tag_directory(r['Tags'])
 
@@ -119,9 +117,8 @@ class CPTVDownloader:
                         print(format_row(r) + '.mp4' + " [{}]".format(tag_dir))
 
                 if self.include_metadata:
-                    if not os.path.exists(path_base+'.dat'):
-                        with open(path_base+'.dat', 'w') as t:
-                            t.write(str(r))
+                    if not os.path.exists(path_base+'.txt'):
+                        json.dump(r, open(path_base+'.txt', 'w'), indent=4)
 
             finally:
                 q.task_done()
@@ -208,8 +205,6 @@ def main():
         print("Downloading new clips from the past {} days.".format(args.recent))
         downloader.start_date = datetime.datetime.now() - datetime.timedelta(days=args.recent)
         downloader.end_date = datetime.datetime.now()
-        print(downloader.start_date)
-        print(downloader.end_date)
 
     downloader.only_tags = args.tag
     downloader.ignore_tags = args.ignore
