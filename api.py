@@ -25,9 +25,9 @@ class API:
 
         where = [{"duration": {"$gte": min_secs}}]
         if startDate is not None:
-            where.append({'recordingDateTime': {'$lte': startDate.isoformat()}})
-        if endDate is not None:
             where.append({'recordingDateTime': {'$gte': startDate.isoformat()}})
+        if endDate is not None:
+            where.append({'recordingDateTime': {'$lte': endDate.isoformat()}})
 
         params = {'where': json.dumps(where)}
         if limit is not None:
