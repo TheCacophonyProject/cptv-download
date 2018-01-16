@@ -171,7 +171,7 @@ def main():
     parser.add_argument('user', default=None, help='Username')
     parser.add_argument('password', default=None, help='Password')
 
-    parser.add_argument('-s', '--server', default=['https://api-test.cacophony.org.nz', 'https://api.cacophony.org.nz'],
+    parser.add_argument('-s', '--server', default=['https://api.cacophony.org.nz'],
                         help='CPTV file server URL')
     parser.add_argument('--start-date', default=None,
                         help='If specified only files recorded on or after this date will be downloaded.')
