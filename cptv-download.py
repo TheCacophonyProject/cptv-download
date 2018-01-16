@@ -157,6 +157,7 @@ def get_tag_directory(tags):
 
     return list(clip_tags)[0]
 
+
 def format_row(row):
     return "{} {} {}s".format(
         row['id'], row['Device']['devicename'], row['duration'])
