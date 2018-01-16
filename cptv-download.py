@@ -136,18 +136,26 @@ def remove_file(file):
 def get_tag_directory(tags):
     """Determine the directory store videos in based on tags. """
 
-    if tags is None or len(tags) == 0:
+    if tags is None:
         return "untagged"
 
     # get a unique list of tags.
     # note, tags can have event set to 'false positive' in which case we use this as the 'animal' type.
-    tags = list(set(tag['animal'] if tag['event'] != 'false positive' else 'false-positive' for tag in tags))
+    clip_tags = set()
 
-    if len(tags) >= 2:
+    for tag in tags:
+        if tag['automatic']:
+            continue
+        tag_name = tag['animal'] if tag['event'] != 'false positive' else 'false-positive'
+        clip_tags.add(tag_name)
+
+    if len(clip_tags) >= 2:
         return "multi"
 
-    return tags[0]
+    if len(clip_tags) == 0:
+        return "untagged"
 
+    return list(clip_tags)[0]
 
 def format_row(row):
     return "{} {} {}s".format(
