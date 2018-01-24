@@ -155,7 +155,9 @@ def get_tag_directory(tags):
     if len(clip_tags) == 0:
         return "untagged"
 
-    return list(clip_tags)[0]
+    tag = list(clip_tags)[0]
+
+    return tag.replace('/','-')
 
 
 def format_row(row):
