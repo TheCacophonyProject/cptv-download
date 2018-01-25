@@ -94,7 +94,7 @@ class CPTVDownloader:
                 if self.auto_delete:
                     if file_base+'.cptv' in self.file_list:
                         for existing_path in self.file_list[file_base+'.cptv']:
-                            if existing_path != out_dir:
+                            if existing_path != out_dir and os.path.basename(existing_path) not in ['test','hard']:
                                 print("Found {} in {} but should be in {}".format(file_base, existing_path, out_dir))
                                 remove_file(os.path.join(existing_path, file_base + '.cptv'))
                                 remove_file(os.path.join(existing_path, file_base + '.dat'))
