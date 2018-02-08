@@ -144,7 +144,7 @@ def get_tag_directory(tags):
     clip_tags = set()
 
     for tag in tags:
-        if tag['automatic']:
+        if tag.get('automatic', False):
             continue
         tag_name = tag['animal'] if tag['event'] != 'false positive' else 'false-positive'
         clip_tags.add(tag_name)
