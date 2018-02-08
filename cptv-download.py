@@ -126,11 +126,12 @@ class CPTVDownloader:
 
 def remove_file(file):
     """ Delete a file (if it exists). """
-    if os.path.exists(file):
-        try:
-            os.remove(file)
-        except Exception as e:
-            print("Warning, could not remove file {}. Error: {}".format(file, e))
+    try:
+        os.remove(file)
+    except FileNotFoundError:
+        pass
+    except OSError as e:
+        print("Warning, could not remove file {}. Error: {}".format(file, e))
 
 
 def get_tag_directory(tags):
