@@ -15,9 +15,7 @@ The tool requires Python 3.5 or later.
 
 ## Configuration
 
-Edit the constants at the top of the `cptv-download` file. These
-values should really be read from a configuration file but this will
-have to do for now.
+Use `--help` to see how to configure program
 
 ## Queries
 
