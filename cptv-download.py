@@ -80,10 +80,16 @@ class CPTVDownloader:
 
     def _downloader(self, q, api, out_base):
         """ Worker to handle downloading of files. """
+        ignored = 0
+        not_selected = 0
+        processed = 0
+
         while True:
+            
             r = q.get()
 
             if r is None:
+                print('Worker downloaded %d and skipped %d files' %(processed, ignored + not_selected))
                 break
 
             try:
@@ -100,12 +106,19 @@ class CPTVDownloader:
                     self._delete_existing(file_base, out_dir)
 
                 if tag_dir in self.ignore_tags:
+                    print('Ignored file "%s" - tag "%s" ignored' %(file_base, tag_dir))
+                    ignored += 1
                     continue
 
                 if self.only_tags and tag_dir not in self.only_tags:
+                    print('Ignored file "%s" - tag "%s" is not selected' %(file_base, tag_dir))
+                    not_selected += 1
                     continue
 
                 out_dir.mkdir(parents=True, exist_ok=True)
+
+                print('Processing ', file_base)
+                processed += 1
 
                 if iter_to_file(path_base + '.cptv', api.download_cptv(
                         r['id'])):
