@@ -229,6 +229,11 @@ def main():
         '-l', '--limit',
         default=1000,
         help='Limit number of downloads')
+    parser.add_argument('-m', '-mp4', 
+        dest='include_mp4', 
+        action='store_true', 
+        default=False,
+        help='add if you want to download mp4 files')
     # yapf: enable
 
     args = parser.parse_args()
@@ -254,6 +259,7 @@ def main():
     downloader.limit = args.limit
     downloader.verbose = args.verbose
     downloader.auto_delete = args.auto_delete
+    downloader.include_mp4 = args.include_mp4
 
     if downloader.auto_delete:
         print("Auto delete enabled.")
