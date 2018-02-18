@@ -80,13 +80,13 @@ class CPTVUploader:
                 newProps = dict()
 
                 for key in propTypesToTransfer: 
-                    if (oldprops[key] != None):
+                    if (key in oldprops and oldprops[key] is not None):
                         newProps[key] = oldprops[key]
                 
                 # Tags can be imported at the moment - maybe because there is no tagger Id. 
                 # tags = oldprops['Tags']
 
-                # if (tags != None):
+                # if (tags is not None):
                 #     tagPropTypesToTransfer = ("confidence", "number", "sex", "updatedAt", "startTime", 
                 #         "age","automatic", "createdAt", "trapType", "event", "animal", "duration")
                 #     newTags = list()
@@ -94,7 +94,7 @@ class CPTVUploader:
                 #     for tag in tags:
                 #         newTagProps = dict()
                 #         for key in tagPropTypesToTransfer: 
-                #             if (tag[key] != None):
+                #             if (tag[key] is not None):
                 #                 newTagProps[key] = tag[key]
 
                 #         newTags += newTagProps

@@ -1,4 +1,3 @@
-import os
 import json
 import requests
 from urllib.parse import urljoin
@@ -28,7 +27,7 @@ class DeviceAPI:
         url = urljoin(self._baseurl, '/api/v1/recordings')
         print(filename)
 
-        if (jsonProps == None):
+        if (jsonProps is None):
             jsonProps = '{"type": "thermalRaw"}'
             print (' null props')
 
