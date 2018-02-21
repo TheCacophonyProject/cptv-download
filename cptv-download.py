@@ -19,6 +19,7 @@ class CPTVDownloader:
         self.start_date = None
         self.end_date = None
         self.limit = None
+        self.tag_mode = None
 
         # list of tags to ignore
         self.ignore_tags = []
@@ -55,18 +56,17 @@ class CPTVDownloader:
             limit=self.limit,
             startDate=self.start_date,
             endDate=self.end_date,
+            tagmode=self.tag_mode,
+            tags=self.only_tags,
         )
 
         if self.auto_delete:
             self.update_file_locations()
 
         pool = Pool(self.workers, self._downloader, api, Path(self.out_folder))
-        file_count = 0
         for row in rows:
-            file_count += 1
             pool.put(row)
         pool.stop()
-        print("Finished {0} files.".format(file_count))
 
     def update_file_locations(self):
         """ Scans output folder building a list of all files. """
@@ -167,7 +167,7 @@ def get_tag_directory(tags):
     clip_tags = set()
 
     for tag in tags:
-        if tag.get('automatic', False):
+        if tag['automatic']:
             continue
         tag_name = tag[
             'animal'] if tag['event'] != 'false positive' else 'false-positive'
@@ -177,7 +177,7 @@ def get_tag_directory(tags):
         return "multi"
 
     if not clip_tags:
-        return "untagged"
+        return "untagged-by-humans"
 
     tag = list(clip_tags)[0]
 
@@ -223,10 +223,12 @@ def main():
         help='Download files only from the previous n days (overwrites start-date and end-date')
     parser.add_argument(
         '-t', '--tag',
+        action='append',
+        default=[],
         help='Specific tag to download, of not specified all non ignored tags will be downloaded')
     parser.add_argument(
         '-i', '--ignore',
-        default=['untagged', 'multi'],
+        default=['untagged', 'multi', 'untagged-by-humans'],
         help='List of tags to ignore')
     parser.add_argument(
         '-v', '--verbose',
@@ -242,11 +244,16 @@ def main():
         '-l', '--limit',
         default=1000,
         help='Limit number of downloads')
-    parser.add_argument('-m', '-mp4', 
+    parser.add_argument('-m', '--mp4', 
         dest='include_mp4', 
         action='store_true', 
         default=False,
         help='add if you want to download mp4 files')
+    parser.add_argument('-tm', '--tagmode', 
+        dest='tag_mode', 
+        action='store_true', 
+        default='automatic+human',
+        help='Select videos by only a particular tag mode.  Default is only selects videos tagged by both humans and automatic')
     # yapf: enable
 
     args = parser.parse_args()
@@ -273,6 +280,7 @@ def main():
     downloader.verbose = args.verbose
     downloader.auto_delete = args.auto_delete
     downloader.include_mp4 = args.include_mp4
+    downloader.tag_mode = args.tag_mode
 
     if downloader.auto_delete:
         print("Auto delete enabled.")
