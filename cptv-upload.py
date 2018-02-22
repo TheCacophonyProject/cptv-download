@@ -1,7 +1,6 @@
 from deviceapi import DeviceAPI
 
 import argparse
-from pool import Pool
 
 import os
 
@@ -9,28 +8,21 @@ import json
 
 class CPTVUploader:
     def __init__(self):
-        self.url = None
+        self.url = None        
         self.source_dir = None
+        self.device_name = None
+        self.device_password = None
 
     def process(self):
-        print('url is ', self.url)
-        api = DeviceAPI(self.url)
+        print('Uploading to  ', self.url)
+        api = DeviceAPI(self.url, devicename = self.device_name, password = self.device_password)
 
         files = self._find_files_to_upload()
         for file in files:
             self._uploadfile(api, file)
 
-        # pool = Pool(4, self._uploader, api)
-        # for file in files:
-        #     pool.put(file)
-        # pool.stop()
-
-
     def _uploadfile(self, api, filename):
         props = self._readPropertiesFromFile(filename)
-
-        print('props to transfer ')
-        print(props)
 
         api.uploadrecording(filename, props)
 
@@ -41,7 +33,6 @@ class CPTVUploader:
             filename = queue.get()
 
             if filename is None:
-                print('Closing thread')
                 break
 
             try:
@@ -53,7 +44,6 @@ class CPTVUploader:
     def _find_files_to_upload(self):
         cptvfiles = list()
 
-        print('testing dir', self.source_dir)
         for root, dirs, files in os.walk(self.source_dir):
             for file in files:
                 if file.lower().endswith(".cptv"):
@@ -64,8 +54,6 @@ class CPTVUploader:
     def _readPropertiesFromFile(self, filename): 
         basefile = os.path.splitext(filename)[0]
         jsonfilename = basefile + '.txt'
-
-        print(jsonfilename)
 
         if (os.path.isfile(jsonfilename)):
             with open(jsonfilename, 'r') as propsfile: 
@@ -82,11 +70,13 @@ class CPTVUploader:
                 for key in propTypesToTransfer: 
                     if (key in oldprops and oldprops[key] is not None):
                         newProps[key] = oldprops[key]
-                
-                # Tags can be imported at the moment - maybe because there is no tagger Id. 
-                # tags = oldprops['Tags']
 
-                # if (tags is not None):
+                newProps["comment"] = 'uploaded from "' + filename + '"'
+                
+                # Tags can't be imported at the moment - maybe because there is no tagger Id. 
+
+                # if ('Tags' in oldprops and oldprops['Tags'] is not None):
+                #   tags = oldprops['Tags']
                 #     tagPropTypesToTransfer = ("confidence", "number", "sex", "updatedAt", "startTime", 
                 #         "age","automatic", "createdAt", "trapType", "event", "animal", "duration")
                 #     newTags = list()
@@ -94,11 +84,9 @@ class CPTVUploader:
                 #     for tag in tags:
                 #         newTagProps = dict()
                 #         for key in tagPropTypesToTransfer: 
-                #             if (tag[key] is not None):
+                #             if (key in tag and tag[key] is not None):
                 #                 newTagProps[key] = tag[key]
-
-                #         newTags += newTagProps
-                    
+                #         newTags += newTagProps                    
                 #     newProps['Tags'] = newTagProps
 
                 return json.dumps(newProps)
@@ -109,16 +97,25 @@ class CPTVUploader:
 def main(): 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-p', '--password',
+        dest='device_password',
+        default='password',
+        help='Password for the device')
+
     parser.add_argument('server_url',  help='Server (base) url to send the CPTV files to')
     
     parser.add_argument('source_dir',  help='Root folder where files for upload are stored')
     
+    parser.add_argument('device_name',  help='Device identifier to upload recordings under')
+
     uploader = CPTVUploader()
 
     args = parser.parse_args()
 
     uploader.url = args.server_url
     uploader.source_dir = args.source_dir
+    uploader.device_name = args.device_name
+    uploader.device_password = args.device_password
 
     uploader.process()
 

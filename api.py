@@ -17,7 +17,13 @@ class API:
             'username': self._username,
             'password': password,
             })
-        r.raise_for_status()
+
+        try: 
+            r.raise_for_status()
+        except:
+            raise Exception("Could not log on as '" + self._username +  "'.  Please check username and password")
+
+
         return r.json().get('token')
 
     def query(self, startDate=None, endDate=None, min_secs=5, limit=100, offset=0, tagmode=None, tags=None):
