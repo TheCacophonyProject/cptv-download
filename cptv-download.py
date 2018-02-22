@@ -228,7 +228,8 @@ def main():
         help='Specific tag to download, of not specified all non ignored tags will be downloaded')
     parser.add_argument(
         '-i', '--ignore',
-        default=['untagged', 'multi', 'untagged-by-humans'],
+        action='append',
+        default=None,
         help='List of tags to ignore')
     parser.add_argument(
         '-v', '--verbose',
@@ -275,12 +276,17 @@ def main():
         downloader.end_date = datetime.datetime.now()
 
     downloader.only_tags = args.tag
-    downloader.ignore_tags = args.ignore
     downloader.limit = args.limit
     downloader.verbose = args.verbose
     downloader.auto_delete = args.auto_delete
     downloader.include_mp4 = args.include_mp4
     downloader.tag_mode = args.tag_mode
+    if (args.ignore is not None):
+        downloader.ignore_tags = args.ignore
+    else:
+        print("is none")
+        downloader.ignore_tags = ['untagged', 'multi', 'untagged-by-humans']
+
 
     if downloader.auto_delete:
         print("Auto delete enabled.")
