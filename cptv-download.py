@@ -225,12 +225,12 @@ def main():
         '-t', '--tag',
         action='append',
         default=[],
-        help='Specific tag to download, of not specified all non ignored tags will be downloaded')
+        help='Specific tag to download, of if not specified all non ignored tags will be downloaded - can use multiple times')
     parser.add_argument(
         '-i', '--ignore',
         action='append',
         default=None,
-        help='List of tags to ignore')
+        help='Tag to ignore - can use multiple times')
     parser.add_argument(
         '-v', '--verbose',
         action='store_true',
