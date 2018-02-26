@@ -1,10 +1,9 @@
 from deviceapi import DeviceAPI
 
 import argparse
-
 import os
-
 import json
+import glob
 
 class CPTVUploader:
     def __init__(self):
@@ -42,12 +41,7 @@ class CPTVUploader:
                 queue.task_done()
 
     def _find_files_to_upload(self):
-        cptvfiles = list()
-
-        for root, dirs, files in os.walk(self.source_dir):
-            for file in files:
-                if file.lower().endswith(".cptv"):
-                    cptvfiles.append(os.path.join(root, file))
+        cptvfiles = glob.glob(os.path.join(self.source_dir, '**', '*.cptv'), recursive=True)
         
         return cptvfiles
 
@@ -68,7 +62,7 @@ class CPTVUploader:
                 newProps = dict()
 
                 for key in propTypesToTransfer: 
-                    if (key in oldprops and oldprops[key] is not None):
+                    if oldprops.get(key) is not None:
                         newProps[key] = oldprops[key]
 
                 newProps["comment"] = 'uploaded from "' + filename + '"'
