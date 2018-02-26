@@ -52,6 +52,11 @@ class CPTVDownloader:
         api = API(url, self.user, self.password)
 
         print("Querying server {0}".format(url))
+        print("Limit is {0}".format(self.limit))
+        print("Tag mode {0}".format(self.tag_mode))
+        print("Dates are {0} - {1}".format(self.start_date, self.end_date))
+        print("Required tags are {0}".format(self.only_tags))
+        
         rows = api.query(
             limit=self.limit,
             startDate=self.start_date,
@@ -118,7 +123,6 @@ class CPTVDownloader:
                 out_dir.mkdir(parents=True, exist_ok=True)
 
                 print('Processing ', file_base)
-                processed += 1
 
                 if iter_to_file(path_base + '.cptv', api.download_cptv(
                         r['id'])):
@@ -132,6 +136,8 @@ class CPTVDownloader:
                 if self.include_metadata:
                     if not os.path.exists(path_base + '.txt'):
                         json.dump(r, open(path_base + '.txt', 'w'), indent=4)
+
+                processed += 1
 
             finally:
                 q.task_done()
@@ -245,14 +251,13 @@ def main():
         '-l', '--limit',
         default=1000,
         help='Limit number of downloads')
-    parser.add_argument('-m', '--mp4', 
+    parser.add_argument('--mp4', 
         dest='include_mp4', 
         action='store_true', 
         default=False,
         help='add if you want to download mp4 files')
-    parser.add_argument('-tm', '--tagmode', 
+    parser.add_argument('-m', '--tagmode', 
         dest='tag_mode', 
-        action='store_true', 
         default='automatic+human',
         help='Select videos by only a particular tag mode.  Default is only selects videos tagged by both humans and automatic')
     # yapf: enable
