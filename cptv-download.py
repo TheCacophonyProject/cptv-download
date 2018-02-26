@@ -56,6 +56,7 @@ class CPTVDownloader:
         print("Tag mode {0}".format(self.tag_mode))
         print("Dates are {0} - {1}".format(self.start_date, self.end_date))
         print("Required tags are {0}".format(self.only_tags))
+        print("Ignore tags are {0}".format(self.ignore_tags))
         
         rows = api.query(
             limit=self.limit,
