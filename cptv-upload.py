@@ -24,7 +24,7 @@ class CPTVUploader:
     def _uploadfile(self, api, filename):
         props = self._readPropertiesFromFile(filename)
 
-        api.uploadrecording(filename, props)
+        api.upload_recording(filename, props)
 
 
     def _uploader(self, queue, api):

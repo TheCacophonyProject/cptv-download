@@ -281,10 +281,9 @@ def main():
     downloader.auto_delete = args.auto_delete
     downloader.include_mp4 = args.include_mp4
     downloader.tag_mode = args.tag_mode
-    if (args.ignore is not None):
+    if args.ignore:
         downloader.ignore_tags = args.ignore
     else:
-        print("is none")
         downloader.ignore_tags = ['untagged', 'multi', 'untagged-by-humans']
 
 

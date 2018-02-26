@@ -18,15 +18,18 @@ class DeviceAPI:
             'password': password,
             })
 
-        try: 
+        if r.status_code == 200:
+            return r.json().get('token')
+        elif r.status_code == 422:
+            raise ValueError("Could not log on as '{}'.  Please check device name.".format(self._devicename))
+        elif r.status_code == 401:
+            raise ValueError("Could not log on as '{}'.  Please check password.".format(self._devicename))
+        else:
             r.raise_for_status()
-        except:
-            raise Exception("Could not log on as '" + self._devicename +  "'.  Please check device name and password")
-            
-        return r.json().get('token')
+
         
 
-    def uploadrecording(self, filename, jsonProps = None): 
+    def upload_recording(self, filename, jsonProps = None): 
         url = urljoin(self._baseurl, '/api/v1/recordings')
 
         if (jsonProps is None):

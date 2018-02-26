@@ -18,13 +18,17 @@ class API:
             'password': password,
             })
 
-        try: 
+        if r.status_code == 200:
+            return r.json().get('token')
+        elif r.status_code == 422:
+            raise ValueError("Could not log on as '{}'.  Please check user name.".format(self._username))
+        elif r.status_code == 401:
+            raise ValueError("Could not log on as '{}'.  Please check password.".format(self._username))
+        else:
             r.raise_for_status()
-        except:
-            raise Exception("Could not log on as '" + self._username +  "'.  Please check username and password")
 
 
-        return r.json().get('token')
+        
 
     def query(self, startDate=None, endDate=None, min_secs=5, limit=100, offset=0, tagmode=None, tags=None):
         url = urljoin(self._baseurl, '/api/v1/recordings')
