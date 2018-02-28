@@ -17,10 +17,20 @@ class API:
             'username': self._username,
             'password': password,
             })
-        r.raise_for_status()
-        return r.json().get('token')
 
-    def query(self, startDate=None, endDate=None, min_secs=5, limit=100, offset=0):
+        if r.status_code == 200:
+            return r.json().get('token')
+        elif r.status_code == 422:
+            raise ValueError("Could not log on as '{}'.  Please check user name.".format(self._username))
+        elif r.status_code == 401:
+            raise ValueError("Could not log on as '{}'.  Please check password.".format(self._username))
+        else:
+            r.raise_for_status()
+
+
+        
+
+    def query(self, startDate=None, endDate=None, min_secs=5, limit=100, offset=0, tagmode=None, tags=None):
         url = urljoin(self._baseurl, '/api/v1/recordings')
 
         where = [{"duration": {"$gte": min_secs}}]
@@ -34,6 +44,10 @@ class API:
             params['limit'] = limit
         if offset is not None:
             params['offset'] = offset
+        if tagmode is not None:
+            params['tagMode'] = tagmode
+        if tags is not None:
+            params['tags'] = json.dumps(tags)
 
         r = requests.get(url, params=params, headers=self._auth_header)
         if r.status_code == 200:

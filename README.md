@@ -5,19 +5,23 @@ CPTV and MP4 format from a Cacophony API instance. Videos are grouped
 into directories by the tagged animal type. Recordings are downloaded
 in parallel.
 
+# cptv-upload
+
+This tool supports bulk uploading of thermal video recordings into a 
+Cacophony API instance.  This is useful for setting up a development
+server.   
+
 ## Installation
 
-The tool requires Python 3.5 or later.
+These tools require Python 3.5 or later.
 
 * Create a virtualenv using your preferred method.
 * Install dependencies: `pip install -r requirements.txt`
-* Run with: `./cptv-download`
+* Run with: `./cptv-download` or `./cptv-upload`
 
 ## Configuration
 
-Edit the constants at the top of the `cptv-download` file. These
-values should really be read from a configuration file but this will
-have to do for now.
+Use `--help` to see how to configure program.
 
 ## Queries
 
