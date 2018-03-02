@@ -1,34 +1,14 @@
+from apibase import APIBase
+
 import json
 import requests
 from urllib.parse import urljoin
 
 
-class API:
+class API(APIBase):
 
     def __init__(self, baseurl, username, password):
-        self._baseurl = baseurl
-        self._username = username
-        self._token = self._get_jwt(password)
-        self._auth_header = {'Authorization': self._token}
-
-    def _get_jwt(self, password):
-        url = urljoin(self._baseurl, "/authenticate_user")
-        r = requests.post(url, data={
-            'username': self._username,
-            'password': password,
-            })
-
-        if r.status_code == 200:
-            return r.json().get('token')
-        elif r.status_code == 422:
-            raise ValueError("Could not log on as '{}'.  Please check user name.".format(self._username))
-        elif r.status_code == 401:
-            raise ValueError("Could not log on as '{}'.  Please check password.".format(self._username))
-        else:
-            r.raise_for_status()
-
-
-        
+        super().__init__(baseurl, username, password, 'user')
 
     def query(self, startDate=None, endDate=None, min_secs=5, limit=100, offset=0, tagmode=None, tags=None):
         url = urljoin(self._baseurl, '/api/v1/recordings')
@@ -73,14 +53,7 @@ class API:
     def _download_signed(self, token):
         r = requests.get(
             urljoin(self._baseurl, '/api/v1/signedUrl'),
-            headers={'Authorization': 'JWT ' + token},
+            params={'jwt': token},
             stream=True)
         r.raise_for_status()
         yield from r.iter_content(chunk_size=4096)
-
-    def _check_response(self, r):
-        if r.status_code == 400:
-            messages = r.json().get('messages', '')
-            raise IOError("request failed ({}): {}".format(r.status_code, messages))
-        r.raise_for_status()
-        return r.json()
