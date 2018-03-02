@@ -51,7 +51,6 @@ class API(APIBase):
         return self._download_signed(d[jwt_key])
 
     def _download_signed(self, token):
-        print(token)
         r = requests.get(
             urljoin(self._baseurl, '/api/v1/signedUrl'),
             params={'jwt': token},
