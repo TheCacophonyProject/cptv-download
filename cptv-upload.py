@@ -5,6 +5,8 @@ import os
 import json
 import glob
 
+import cptv
+
 class CPTVUploader:
     def __init__(self):
         self.url = None        
@@ -49,7 +51,7 @@ class CPTVUploader:
         basefile = os.path.splitext(filename)[0]
         jsonfilename = basefile + '.txt'
 
-        if (os.path.isfile(jsonfilename)):
+        if os.path.isfile(jsonfilename):
             with open(jsonfilename, 'r') as propsfile: 
 
                 oldprops = json.load(propsfile)
@@ -66,7 +68,7 @@ class CPTVUploader:
                         newProps[key] = oldprops[key]
 
                 newProps["comment"] = 'uploaded from "' + filename + '"'
-                
+
                 # Tags can't be imported at the moment - maybe because there is no tagger Id. 
 
                 # if ('Tags' in oldprops and oldprops['Tags'] is not None):
@@ -80,11 +82,20 @@ class CPTVUploader:
                 #         for key in tagPropTypesToTransfer: 
                 #             if (key in tag and tag[key] is not None):
                 #                 newTagProps[key] = tag[key]
-                #         newTags += newTagProps                    
+                #         newTags += newTagProps
                 #     newProps['Tags'] = newTagProps
 
                 return json.dumps(newProps)
-        
+
+        else:
+            with open(filename, "rb") as cptvfile:
+                reader = cptv.CPTVReader(cptvfile)
+                timestamp = reader.timestamp
+            return json.dumps({
+                'type': 'thermalRaw',
+                'recordingDateTime': timestamp.isoformat(),
+            })
+
         return None
 
 
