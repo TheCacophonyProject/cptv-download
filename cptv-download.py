@@ -95,7 +95,7 @@ class CPTVDownloader:
             r = q.get()
 
             if r is None:
-                print('Worker downloaded %d and skipped %d files' %(processed, ignored + not_selected))
+                print('Worker processed %d and skipped %d files' %(processed, ignored + not_selected))
                 break
 
             try:
@@ -146,9 +146,9 @@ class CPTVDownloader:
     def _delete_existing(self, file_base, new_dir):
         for path in self.file_list.get(file_base + '.cptv', []):
             path = Path(path)
-            if str(path) != new_dir and path.name not in SPECIAL_DIRS:
-                print("Found {} in {} but should be in {}".format(
-                    file_base, path, new_dir))
+            if str(path) != str(new_dir) and path.name not in SPECIAL_DIRS:
+                print("Found {} in '{}' but should be in '{}'".format(
+                    file_base, str(path), str(new_dir)))
                 for ext in ['cptv', 'dat', 'mp4']:
                     remove_file(str(path / (file_base + '.' + ext)))
 
