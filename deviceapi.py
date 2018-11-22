@@ -20,20 +20,18 @@ class DeviceAPI(APIBase):
         with open(filename, 'rb') as thermalfile: 
             multipart_data = MultipartEncoder(
                 fields={
-                        # a file upload field
                         'file': ('file.py', thermalfile),
-                        # plain text fields
                         'data': jsonProps 
                     }
                 )
             headers={'Content-Type': multipart_data.content_type, 'Authorization': self._token}
             r = requests.post(url, data=multipart_data, headers=headers)
 
-
         if r.status_code == 200:
             print('Successful upload of ', filename)
         
         self._check_response(r)
+        return r.json()
 
 
 
