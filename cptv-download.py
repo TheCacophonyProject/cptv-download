@@ -125,13 +125,13 @@ class CPTVDownloader:
 
                 print('Processing ', file_base)
 
-                if iter_to_file(path_base + '.cptv', api.download_cptv(
+                if iter_to_file(path_base + '.cptv', api.download_raw(
                         r['id'])):
                     print(format_row(r) + '.cptv' + " [{}]".format(tag_dir))
 
                 if self.include_mp4:
                     if iter_to_file(path_base + '.mp4',
-                                    api.download_mp4(r['id'])):
+                                    api.download(r['id'])):
                         print(format_row(r) + '.mp4' + " [{}]".format(tag_dir))
 
                 if self.include_metadata:

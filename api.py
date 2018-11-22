@@ -6,54 +6,70 @@ from urllib.parse import urljoin
 
 
 class API(APIBase):
-
     def __init__(self, baseurl, username, password):
-        super().__init__(baseurl, username, password, 'user')
+        super().__init__(baseurl, username, password, "user")
 
-    def query(self, startDate=None, endDate=None, min_secs=5, limit=100, offset=0, tagmode=None, tags=None):
-        url = urljoin(self._baseurl, '/api/v1/recordings')
+    def query(
+        self,
+        type_=None,
+        startDate=None,
+        endDate=None,
+        min_secs=None,
+        limit=100,
+        offset=0,
+        tagmode=None,
+        tags=None,
+        devices=None,
+    ):
+        url = urljoin(self._baseurl, "/api/v1/recordings")
 
-        where = [{"duration": {"$gte": min_secs}}]
+        where = {}
+        if type_ is not None:
+            where["type"] = type_
+        if min_secs is not None:
+            where["duration"] = {"$gte": min_secs}
         if startDate is not None:
-            where.append({'recordingDateTime': {'$gte': startDate.isoformat()}})
+            where["recordingDateTime"] = {"$gte": startDate.isoformat()}
         if endDate is not None:
-            where.append({'recordingDateTime': {'$lte': endDate.isoformat()}})
+            where.setdefault("recordingDateTime", {})["$lte"] = endDate.isoformat()
+        if devices is not None:
+            where["DeviceId"] = devices
+        params = {"where": json.dumps(where)}
 
-        params = {'where': json.dumps(where)}
         if limit is not None:
-            params['limit'] = limit
+            params["limit"] = limit
         if offset is not None:
-            params['offset'] = offset
+            params["offset"] = offset
         if tagmode is not None:
-            params['tagMode'] = tagmode
+            params["tagMode"] = tagmode
         if tags is not None:
-            params['tags'] = json.dumps(tags)
+            params["tags"] = json.dumps(tags)
 
         r = requests.get(url, params=params, headers=self._auth_header)
         if r.status_code == 200:
-            return r.json()['rows']
-        elif r.status_code == 400:
-            messages = r.json()['messages']
+            return r.json()["rows"]
+        if r.status_code in (400, 422):
+            messages = r.json()["message"]
             raise IOError("request failed ({}): {}".format(r.status_code, messages))
-        else:
-            r.raise_for_status()
+        return r.raise_for_status()
 
-    def download_cptv(self, id):
-        return self._download_recording(id, 'downloadRawJWT')
+    def download(self, recording_id):
+        return self._download_recording(recording_id, "downloadFileJWT")
 
-    def download_mp4(self, id):
-        return self._download_recording(id, 'downloadFileJWT')
+    def download_raw(self, recording_id):
+        return self._download_recording(recording_id, "downloadRawJWT")
 
-    def _download_recording(self, id, jwt_key):
-        url = urljoin(self._baseurl, '/api/v1/recordings/{}'.format(id))
+    def _download_recording(self, recording_id, jwt_key):
+        url = urljoin(self._baseurl, "/api/v1/recordings/{}".format(recording_id))
         r = requests.get(url, headers=self._auth_header)
         d = self._check_response(r)
         return self._download_signed(d[jwt_key])
 
     def _download_signed(self, token):
         r = requests.get(
-            urljoin(self._baseurl, '/api/v1/signedUrl'),
-            params={'jwt': token},
-            stream=True)
+            urljoin(self._baseurl, "/api/v1/signedUrl"),
+            params={"jwt": token},
+            stream=True,
+        )
         r.raise_for_status()
         yield from r.iter_content(chunk_size=4096)
