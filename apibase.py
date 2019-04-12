@@ -3,6 +3,7 @@ import requests
 from urllib.parse import urljoin
 
 
+
 class APIBase:     
     
     def __init__(self, baseurl, loginname, password, logintype):

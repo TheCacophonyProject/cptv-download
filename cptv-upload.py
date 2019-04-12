@@ -1,130 +1,22 @@
-from deviceapi import DeviceAPI
-
 import argparse
-import os
-import json
-import glob
 
-import cptv
-
-class CPTVUploader:
-    def __init__(self):
-        self.url = None        
-        self.source_dir = None
-        self.device_name = None
-        self.device_password = None
-
-    def process(self):
-        print('Uploading to  ', self.url)
-        api = DeviceAPI(self.url, devicename = self.device_name, password = self.device_password)
-
-        files = self._find_files_to_upload()
-        for file in files:
-            self._uploadfile(api, file)
-
-    def _uploadfile(self, api, filename):
-        props = self._readPropertiesFromFile(filename)
-
-        api.upload_recording(filename, props)
+from api import API
 
 
-    def _uploader(self, queue, api):
-        while True:
-            
-            filename = queue.get()
-
-            if filename is None:
-                break
-
-            try:
-                _uploadfile(api, filename)
-
-            finally:
-                queue.task_done()
-
-    def _find_files_to_upload(self):
-        cptvfiles = glob.glob(os.path.join(self.source_dir, '**', '*.cptv'), recursive=True)
-        
-        return cptvfiles
-
-    def _readPropertiesFromFile(self, filename): 
-        basefile = os.path.splitext(filename)[0]
-        jsonfilename = basefile + '.txt'
-
-        if os.path.isfile(jsonfilename):
-            with open(jsonfilename, 'r') as propsfile: 
-
-                oldprops = json.load(propsfile)
-
-                # List of properties to transfer.   Many such as Id, we don't want to transfer. 
-                propTypesToTransfer = ("batteryCharging", "additionalMetadata", "comment", "location", 
-                            "fileSize", "batteryLevel", "duration", "rawFileSize", "airplaneModeOn", 
-                            "version", "recordingDateTime", "fileMimeType", "type")
-
-                newProps = dict()
-
-                for key in propTypesToTransfer: 
-                    if oldprops.get(key) is not None:
-                        newProps[key] = oldprops[key]
-
-                newProps["comment"] = 'uploaded from "' + filename + '"'
-
-                # Tags can't be imported at the moment - maybe because there is no tagger Id. 
-
-                # if ('Tags' in oldprops and oldprops['Tags'] is not None):
-                #   tags = oldprops['Tags']
-                #     tagPropTypesToTransfer = ("confidence", "number", "sex", "updatedAt", "startTime", 
-                #         "age","automatic", "createdAt", "trapType", "event", "animal", "duration")
-                #     newTags = list()
-
-                #     for tag in tags:
-                #         newTagProps = dict()
-                #         for key in tagPropTypesToTransfer: 
-                #             if (key in tag and tag[key] is not None):
-                #                 newTagProps[key] = tag[key]
-                #         newTags += newTagProps
-                #     newProps['Tags'] = newTagProps
-
-                return json.dumps(newProps)
-
-        else:
-            with open(filename, "rb") as cptvfile:
-                reader = cptv.CPTVReader(cptvfile)
-                timestamp = reader.timestamp
-            return json.dumps({
-                'type': 'thermalRaw',
-                'recordingDateTime': timestamp.isoformat(),
-            })
-
-        return None
-
-
-def main(): 
+def main():
     parser = argparse.ArgumentParser()
-
-    parser.add_argument('-p', '--password',
-        dest='device_password',
-        default='password',
-        help='Password for the device')
-
-    parser.add_argument('server_url',  help='Server (base) url to send the CPTV files to')
-    
-    parser.add_argument('source_dir',  help='Root folder where files for upload are stored')
-    
-    parser.add_argument('device_name',  help='Device identifier to upload recordings under')
-
-    uploader = CPTVUploader()
-
+    parser.add_argument(
+        "server_url", help="Server (base) url to send the CPTV files to"
+    )
+    parser.add_argument("username", help="Username to upload as")
+    parser.add_argument("password", help="Password to authenticate with")
+    parser.add_argument("devicename", help="Device to upload on behalf of")
+    parser.add_argument("filename", help="File to upload")
     args = parser.parse_args()
 
-    uploader.url = args.server_url
-    uploader.source_dir = args.source_dir
-    uploader.device_name = args.device_name
-    uploader.device_password = args.device_password
-
-    uploader.process()
+    api = API(args.server_url, args.username, args.password)
+    api.upload_recording(args.devicename, args.filename)
 
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
