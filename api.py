@@ -2,6 +2,7 @@ from apibase import APIBase
 
 import json
 import requests
+from requests_toolbelt import MultipartEncoder
 from urllib.parse import urljoin
 
 
@@ -73,3 +74,29 @@ class API(APIBase):
         )
         r.raise_for_status()
         yield from r.iter_content(chunk_size=4096)
+
+    def upload_recording(self, devicename, filename, props=None):
+        """Upload a recording on behalf of a device.
+        """
+        url = urljoin(self._baseurl, "/api/v1/recordings/" + devicename)
+
+        if not props:
+            if filename.endswith(".cptv"):
+                props = {"type": "thermalRaw"}
+            elif filename.endswith(".mp3"):
+                props = {"type": "audio"}
+            else:
+                raise ValueError("not sure how to handle this file type")
+
+        with open(filename, "rb") as f:
+            multipart_data = MultipartEncoder(
+                fields={"file": ("file.dat", f), "data": json.dumps(props)}
+            )
+            headers = {
+                "Content-Type": multipart_data.content_type,
+                "Authorization": self._token,
+            }
+            r = requests.post(url, data=multipart_data, headers=headers)
+
+        self._check_response(r)
+        return r.json()
