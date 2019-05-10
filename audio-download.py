@@ -85,7 +85,12 @@ def download(q, api, out_folder):
         if r is None:
             return
         try:
-            out_path = download_name(r)
+            try:
+                out_path = download_name(r)
+            except ValueError as err:
+                print("error with {}: {}".format(r["id"], err))
+                continue
+
             print("downloading " + str(out_path))
             iter_to_file(api.download_raw(r["id"]), str(out_folder / out_path))
         finally:
@@ -95,7 +100,12 @@ def download(q, api, out_folder):
 def download_name(r):
     dt = parsedate(r["recordingDateTime"])
     device_name = r["Device"]["devicename"]
-    ext = "." + MIME_TO_EXT[r["fileMimeType"]]
+
+    mime_type = r.get("fileMimeType")
+    if not mime_type:
+        raise ValueError("recording has no mime type")
+    ext = "." + MIME_TO_EXT[mime_type]
+
     return device_name + "-" + dt.strftime("%Y%m%d-%H%M%S") + ext
 
 
