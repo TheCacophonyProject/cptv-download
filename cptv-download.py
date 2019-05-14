@@ -6,7 +6,7 @@ import datetime
 import json
 import os
 
-from dateutil.parser import parse as parsedate
+from dateutil.parser import parse
 
 from api import API
 from pool import Pool
@@ -20,7 +20,7 @@ class CPTVDownloader:
         self.end_date = None
         self.limit = None
         self.tag_mode = None
-
+        self.recording_id = None
         # list of tags to ignore
         self.ignore_tags = []
 
@@ -51,6 +51,10 @@ class CPTVDownloader:
 
         api = API(url, self.user, self.password)
 
+        if self.recording_id:
+            recording = api.get(self.recording_id).get("recording")
+            self._download(recording,api, Path(self.out_folder))
+            return
         print("Querying server {0}".format(url))
         print("Limit is {0}".format(self.limit))
         print("Tag mode {0}".format(self.tag_mode))
@@ -93,55 +97,61 @@ class CPTVDownloader:
         while True:
             
             r = q.get()
-
             if r is None:
                 print('Worker processed %d and skipped %d files' %(processed, ignored + not_selected))
                 break
 
             try:
-                tag_dir = get_tag_directory(r['Tags'])
-
-                out_dir = out_base / tag_dir
-                dt = parsedate(r['recordingDateTime'])
-                file_base = dt.strftime(
-                    "%Y%m%d-%H%M%S") + "-" + r['Device']['devicename']
-
-                path_base = str(out_dir / file_base)
-
-                if self.auto_delete:
-                    self._delete_existing(file_base, out_dir)
-
-                if tag_dir in self.ignore_tags:
-                    print('Ignored file "%s" - tag "%s" ignored' %(file_base, tag_dir))
-                    ignored += 1
-                    continue
-
-                if self.only_tags and tag_dir not in self.only_tags:
-                    print('Ignored file "%s" - tag "%s" is not selected' %(file_base, tag_dir))
-                    not_selected += 1
-                    continue
-
-                out_dir.mkdir(parents=True, exist_ok=True)
-
-                print('Processing ', file_base)
-
-                if iter_to_file(path_base + '.cptv', api.download_raw(
-                        r['id'])):
-                    print(format_row(r) + '.cptv' + " [{}]".format(tag_dir))
-
-                if self.include_mp4:
-                    if iter_to_file(path_base + '.mp4',
-                                    api.download(r['id'])):
-                        print(format_row(r) + '.mp4' + " [{}]".format(tag_dir))
-
-                if self.include_metadata:
-                    if not os.path.exists(path_base + '.txt'):
-                        json.dump(r, open(path_base + '.txt', 'w'), indent=4)
-
+                self._download(r, api, out_base)
                 processed += 1
-
             finally:
                 q.task_done()
+
+    def _download(self, r, api, out_base):
+        tags = r.get('Tags')
+        tracks = r.get('Tracks')
+        tag_dir = get_tag_directory(r['Tags'])
+        out_dir = out_base / tag_dir
+
+        print(r['id'])
+        print(r)
+        # out_dir = out_base
+        dt = parse(r['recordingDateTime'])
+        file_base = dt.strftime(
+            "%Y%m%d-%H%M%S") + "-" + r['Device']['devicename']
+
+        path_base = str(out_dir / file_base)
+
+        if self.auto_delete:
+            self._delete_existing(file_base, out_dir)
+
+        if tag_dir in self.ignore_tags:
+            print('Ignored file "%s" - tag "%s" ignored' %(file_base, tag_dir))
+            ignored += 1
+            return
+
+        if self.only_tags and tag_dir not in self.only_tags:
+            print('Ignored file "%s" - tag "%s" is not selected' %(file_base, tag_dir))
+            not_selected += 1
+            return
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        print('Processing ', file_base)
+
+        if iter_to_file(path_base + '.cptv', api.download_raw(
+                r['id'])):
+            print(format_row(r) + '.cptv' + " [{}]".format(tag_dir))
+
+        if self.include_mp4:
+            if iter_to_file(path_base + '.mp4',
+                            api.download(r['id'])):
+                print(format_row(r) + '.mp4' + " [{}]".format(tag_dir))
+
+        if self.include_metadata:
+            if not os.path.exists(path_base + '.txt'):
+                json.dump(r, open(path_base + '.txt', 'w'), indent=4)
+
 
     def _delete_existing(self, file_base, new_dir):
         for path in self.file_list.get(file_base + '.cptv', []):
@@ -193,7 +203,7 @@ def get_tag_directory(tags):
 
 def format_row(row):
     return "{} {} {}s".format(row['id'], row['Device']['devicename'],
-                              row['duration'])
+                              row.get('duration'))
 
 
 def iter_to_file(filename, source, overwrite=False):
@@ -261,20 +271,29 @@ def main():
         dest='tag_mode', 
         default='automatic+human',
         help='Select videos by only a particular tag mode.  Default is only selects videos tagged by both humans and automatic')
+    parser.add_argument('-id', 
+        dest='recording_id', 
+        default=None,
+        help='Specify the recording id to download')
     # yapf: enable
 
     args = parser.parse_args()
 
     downloader = CPTVDownloader()
-
+    downloader.recording_id = args.recording_id
     downloader.out_folder = args.out_folder
     downloader.user = args.user
     downloader.password = args.password
 
-    downloader.start_date = args.start_date
-    downloader.end_date = args.end_date
+    if args.start_date:
+        downloader.start_date = parse(args.start_date)
 
-    if args.recent:
+    if args.end_date:
+        downloader.end_date = parse(args.end_date)
+
+    if args.recording_id:
+        print("Downloading Recording - {}".format(downloader.recording_id))
+    elif args.recent:
         print("Downloading new clips from the past {} days.".format(
             args.recent))
         downloader.start_date = datetime.datetime.now() - datetime.timedelta(

@@ -10,6 +10,16 @@ class API(APIBase):
     def __init__(self, baseurl, username, password):
         super().__init__(baseurl, username, password, "user")
 
+    def get(self, recording_id):
+        url = urljoin(self._baseurl, "/api/v1/recordings/"+recording_id)
+        r = requests.get(url, headers=self._auth_header)
+        if r.status_code == 200:
+            return r.json()
+        if r.status_code in (400, 422):
+            messages = r.json()["message"]
+            raise IOError("request failed ({}): {}".format(r.status_code, messages))
+        return r.raise_for_status()
+
     def query(
         self,
         type_=None,
@@ -43,8 +53,8 @@ class API(APIBase):
             params["offset"] = offset
         if tagmode is not None:
             params["tagMode"] = tagmode
-        if tags is not None:
-            params["tags"] = json.dumps(tags)
+        # if tags is not None:
+        #     params["tags"] = json.dumps(tags)
 
         r = requests.get(url, params=params, headers=self._auth_header)
         if r.status_code == 200:
