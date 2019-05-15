@@ -113,8 +113,6 @@ class CPTVDownloader:
         tag_dir = get_tag_directory(r['Tags'])
         out_dir = out_base / tag_dir
 
-        print(r['id'])
-        print(r)
         # out_dir = out_base
         dt = parse(r['recordingDateTime'])
         file_base = dt.strftime(
@@ -149,6 +147,9 @@ class CPTVDownloader:
                 print(format_row(r) + '.mp4' + " [{}]".format(tag_dir))
 
         if self.include_metadata:
+            tracks = api.get_tracks(r['id'])
+            r["additionalMetadata"]=""
+            r["tracks"] = tracks.get("tracks")
             if not os.path.exists(path_base + '.txt'):
                 json.dump(r, open(path_base + '.txt', 'w'), indent=4)
 

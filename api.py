@@ -20,6 +20,16 @@ class API(APIBase):
             raise IOError("request failed ({}): {}".format(r.status_code, messages))
         return r.raise_for_status()
 
+    def get_tracks(self, recording_id):
+        url = urljoin(self._baseurl, "/api/v1/recordings/{}/tracks".format(recording_id))
+        r = requests.get(url, headers=self._auth_header)
+        if r.status_code == 200:
+            return r.json()
+        if r.status_code in (400, 422):
+            messages = r.json()["message"]
+            raise IOError("request failed ({}): {}".format(r.status_code, messages))
+        return r.raise_for_status()
+
     def query(
         self,
         type_=None,
