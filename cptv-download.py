@@ -11,7 +11,7 @@ from dateutil.parser import parse
 from api import API
 from pool import Pool
 
-SPECIAL_DIRS = ['test', 'hard']
+SPECIAL_DIRS = ["test", "hard"]
 
 
 class CPTVDownloader:
@@ -53,7 +53,7 @@ class CPTVDownloader:
 
         if self.recording_id:
             recording = api.get(self.recording_id).get("recording")
-            self._download(recording,api, Path(self.out_folder))
+            self._download(recording, api, Path(self.out_folder))
             return
         print("Querying server {0}".format(url))
         print("Limit is {0}".format(self.limit))
@@ -61,7 +61,7 @@ class CPTVDownloader:
         print("Dates are {0} - {1}".format(self.start_date, self.end_date))
         print("Required tags are {0}".format(self.only_tags))
         print("Ignore tags are {0}".format(self.ignore_tags))
-        
+
         rows = api.query(
             limit=self.limit,
             startDate=self.start_date,
@@ -95,10 +95,13 @@ class CPTVDownloader:
         processed = 0
 
         while True:
-            
+
             r = q.get()
             if r is None:
-                print('Worker processed %d and skipped %d files' %(processed, ignored + not_selected))
+                print(
+                    "Worker processed %d and skipped %d files"
+                    % (processed, ignored + not_selected)
+                )
                 break
 
             try:
@@ -108,60 +111,46 @@ class CPTVDownloader:
                 q.task_done()
 
     def _download(self, r, api, out_base):
-        tags = r.get('Tags')
-        tracks = r.get('Tracks')
-        tag_dir = get_tag_directory(r['Tags'])
-        out_dir = out_base / tag_dir
 
-        # out_dir = out_base
-        dt = parse(r['recordingDateTime'])
-        file_base = dt.strftime(
-            "%Y%m%d-%H%M%S") + "-" + r['Device']['devicename']
+        tags = r.get("Tags")
+        tracks = r.get("Tracks")
 
-        path_base = str(out_dir / file_base)
+        dt = parse(r["recordingDateTime"])
+        file_base = dt.strftime("%Y%m%d-%H%M%S") + "-" + r["Device"]["devicename"]
 
+        out_dir = os.path.join(out_base, get_distributed_folder(file_base))
+        fullpath = os.path.join(out_dir, file_base)
         if self.auto_delete:
             self._delete_existing(file_base, out_dir)
 
-        if tag_dir in self.ignore_tags:
-            print('Ignored file "%s" - tag "%s" ignored' %(file_base, tag_dir))
-            ignored += 1
-            return
+        os.makedirs(out_dir, exist_ok=True)
+        print("Processing ", file_base)
 
-        if self.only_tags and tag_dir not in self.only_tags:
-            print('Ignored file "%s" - tag "%s" is not selected' %(file_base, tag_dir))
-            not_selected += 1
-            return
-
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        print('Processing ', file_base)
-
-        if iter_to_file(path_base + '.cptv', api.download_raw(
-                r['id'])):
-            print(format_row(r) + '.cptv' + " [{}]".format(tag_dir))
+        if iter_to_file(fullpath + ".cptv", api.download_raw(r["id"])):
+            print(format_row(r) + ".cptv" + " [{}]".format(out_dir))
 
         if self.include_mp4:
-            if iter_to_file(path_base + '.mp4',
-                            api.download(r['id'])):
-                print(format_row(r) + '.mp4' + " [{}]".format(tag_dir))
+            if iter_to_file(fullpath + ".mp4", api.download(r["id"])):
+                print(format_row(r) + ".mp4" + " [{}]".format(out_dir))
 
         if self.include_metadata:
-            tracks = api.get_tracks(r['id'])
-            r["additionalMetadata"]=""
+            tracks = api.get_tracks(r["id"])
+            r["additionalMetadata"] = ""
             r["tracks"] = tracks.get("tracks")
-            if not os.path.exists(path_base + '.txt'):
-                json.dump(r, open(path_base + '.txt', 'w'), indent=4)
-
+            if not os.path.exists(fullpath + ".txt"):
+                json.dump(r, open(fullpath + ".txt", "w"), indent=4)
 
     def _delete_existing(self, file_base, new_dir):
-        for path in self.file_list.get(file_base + '.cptv', []):
+        for path in self.file_list.get(file_base + ".cptv", []):
             path = Path(path)
             if str(path) != str(new_dir) and path.name not in SPECIAL_DIRS:
-                print("Found {} in '{}' but should be in '{}'".format(
-                    file_base, str(path), str(new_dir)))
-                for ext in ['cptv', 'dat', 'mp4']:
-                    remove_file(str(path / (file_base + '.' + ext)))
+                print(
+                    "Found {} in '{}' but should be in '{}'".format(
+                        file_base, str(path), str(new_dir)
+                    )
+                )
+                for ext in ["cptv", "dat", "mp4"]:
+                    remove_file(str(path / (file_base + "." + ext)))
 
 
 def remove_file(file):
@@ -172,6 +161,16 @@ def remove_file(file):
         pass
     except OSError as e:
         print("Warning, could not remove file {}. Error: {}".format(file, e))
+
+
+def get_distributed_folder(name, num_folders=256, seed=31):
+    """Creates a hash of the name then returns the modulo num_folders"""
+    str_bytes = str.encode(name)
+    hash_code = 0
+    for byte in str_bytes:
+        hash_code = hash_code * seed + int(byte)
+
+    return str(hash_code % num_folders)
 
 
 def get_tag_directory(tags):
@@ -185,10 +184,11 @@ def get_tag_directory(tags):
     clip_tags = set()
 
     for tag in tags:
-        if tag['automatic']:
+        if tag["automatic"]:
             continue
-        tag_name = tag[
-            'animal'] if tag['event'] != 'false positive' else 'false-positive'
+        tag_name = (
+            tag["animal"] if tag["event"] != "false positive" else "false-positive"
+        )
         clip_tags.add(tag_name)
 
     if len(clip_tags) >= 2:
@@ -199,12 +199,13 @@ def get_tag_directory(tags):
 
     tag = list(clip_tags)[0]
 
-    return tag.replace('/', '-')
+    return tag.replace("/", "-")
 
 
 def format_row(row):
-    return "{} {} {}s".format(row['id'], row['Device']['devicename'],
-                              row.get('duration'))
+    return "{} {} {}s".format(
+        row["id"], row["Device"]["devicename"], row.get("duration")
+    )
 
 
 def iter_to_file(filename, source, overwrite=False):
@@ -295,10 +296,10 @@ def main():
     if args.recording_id:
         print("Downloading Recording - {}".format(downloader.recording_id))
     elif args.recent:
-        print("Downloading new clips from the past {} days.".format(
-            args.recent))
+        print("Downloading new clips from the past {} days.".format(args.recent))
         downloader.start_date = datetime.datetime.now() - datetime.timedelta(
-            days=args.recent)
+            days=args.recent
+        )
         downloader.end_date = datetime.datetime.now()
 
     downloader.only_tags = args.tag
@@ -310,20 +311,18 @@ def main():
     if args.ignore:
         downloader.ignore_tags = args.ignore
     else:
-        downloader.ignore_tags = ['untagged', 'multi', 'untagged-by-humans']
-
+        downloader.ignore_tags = ["untagged", "multi", "untagged-by-humans"]
 
     if downloader.auto_delete:
         print("Auto delete enabled.")
 
     server_list = []
     if args.server:
-        server_list = args.server if isinstance(args.server, list) \
-                      else [args.server]
+        server_list = args.server if isinstance(args.server, list) else [args.server]
 
     for server in server_list:
         downloader.process(server)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
