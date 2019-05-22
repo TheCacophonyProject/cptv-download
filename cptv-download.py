@@ -168,9 +168,9 @@ def get_distributed_folder(name, num_folders=256, seed=31):
     str_bytes = str.encode(name)
     hash_code = 0
     for byte in str_bytes:
-        hash_code = hash_code * seed + int(byte)
+        hash_code = hash_code * seed + byte
 
-    return str(hash_code % num_folders)
+    return "{:02x}".format(hash_code % num_folders)
 
 
 def get_tag_directory(tags):
