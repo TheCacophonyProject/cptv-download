@@ -16,6 +16,7 @@ SPECIAL_DIRS = ["test", "hard"]
 
 class CPTVDownloader:
     def __init__(self):
+        self.recording_tags = None
         self.start_date = None
         self.end_date = None
         self.limit = None
@@ -42,12 +43,19 @@ class CPTVDownloader:
         # dictionary mapping filename to paths of all files in output folder
         self.file_list = {}
 
+        self.ignored = 0
+        self.not_selected = 0
+        self.processed = 0
+
     def log(self, message):
         if self.verbose:
             print(message)
 
     def process(self, url):
         """ Downloads all requested files from specified server """
+        self.ignored = 0
+        self.not_selected = 0
+        self.processed = 0
 
         api = API(url, self.user, self.password)
 
@@ -90,35 +98,68 @@ class CPTVDownloader:
 
     def _downloader(self, q, api, out_base):
         """ Worker to handle downloading of files. """
-        ignored = 0
-        not_selected = 0
-        processed = 0
-
         while True:
 
             r = q.get()
             if r is None:
                 print(
                     "Worker processed %d and skipped %d files"
-                    % (processed, ignored + not_selected)
+                    % (self.processed, self.ignored + self.not_selected)
                 )
                 break
 
             try:
                 self._download(r, api, out_base)
-                processed += 1
+                self.processed += 1
             finally:
                 q.task_done()
 
+    def _get_out_dir(self, filebase_name, r):
+        out_dir = ""
+        if self.recording_tags:
+            out_dir = get_tag_directory(r["Tags"])
+        else:
+            out_dir = get_distributed_folder(filebase_name)
+        return out_dir
+
+    def _get_distinct_tags(self, r):
+        tags = []
+        if self.recording_tags:
+            tags = [tag["animal"] for tag in r["Tags"]]
+        else:
+            for track in r["tracks"]:
+                if track.get("data"):
+                    tags.append(track["data"].get("tag"))
+        return tags
+
     def _download(self, r, api, out_base):
-
-        tags = r.get("Tags")
-        tracks = r.get("Tracks")
-
         dt = parse(r["recordingDateTime"])
         file_base = dt.strftime("%Y%m%d-%H%M%S") + "-" + r["Device"]["devicename"]
 
-        out_dir = os.path.join(out_base, get_distributed_folder(file_base))
+        out_dir = self._get_out_dir(file_base, r)
+        if out_dir is None:
+            print('No valid out directory for file "%s"' % file_base)
+            return
+        out_dir = os.path.join(out_base, out_dir)
+
+        tracks = api.get_tracks(r["id"]).get("tracks")
+        r["tracks"] = tracks
+
+        tags = list(self._get_distinct_tags(r))
+        tag = tags[0] if len(tags) == 1 else None
+        if self.recording_tags:
+            tag = out_dir
+
+        if tag and tag in self.ignore_tags:
+            print('Ignored file "%s" - tag "%s" ignored' % (file_base, tag))
+            self.ignored += 1
+            return
+
+        if tag and self.only_tags and tag not in self.only_tags:
+            print('Ignored file "%s" - tag "%s" is not selected' % (file_base, tag))
+            self.not_selected += 1
+            return
+
         fullpath = os.path.join(out_dir, file_base)
         if self.auto_delete:
             self._delete_existing(file_base, out_dir)
@@ -134,9 +175,7 @@ class CPTVDownloader:
                 print(format_row(r) + ".mp4" + " [{}]".format(out_dir))
 
         if self.include_metadata:
-            tracks = api.get_tracks(r["id"])
             r["additionalMetadata"] = ""
-            r["tracks"] = tracks.get("tracks")
             if not os.path.exists(fullpath + ".txt"):
                 json.dump(r, open(fullpath + ".txt", "w"), indent=4)
 
@@ -175,7 +214,6 @@ def get_distributed_folder(name, num_folders=256, seed=31):
 
 def get_tag_directory(tags):
     """Determine the directory store videos in based on tags. """
-
     if tags is None:
         return "untagged"
 
@@ -198,8 +236,8 @@ def get_tag_directory(tags):
         return "untagged-by-humans"
 
     tag = list(clip_tags)[0]
-
-    return tag.replace("/", "-")
+    tag = tag.replace("/", "-") if tag else None
+    return tag
 
 
 def format_row(row):
@@ -218,6 +256,53 @@ def iter_to_file(filename, source, overwrite=False):
 
 
 def main():
+
+    args = parse_args()
+    downloader = CPTVDownloader()
+    downloader.recording_tags = args.recording_tags
+    downloader.recording_id = args.recording_id
+    downloader.out_folder = args.out_folder
+    downloader.user = args.user
+    downloader.password = args.password
+
+    if args.start_date:
+        downloader.start_date = parse(args.start_date)
+
+    if args.end_date:
+        downloader.end_date = parse(args.end_date)
+
+    if args.recording_id:
+        print("Downloading Recording - {}".format(downloader.recording_id))
+    elif args.recent:
+        print("Downloading new clips from the past {} days.".format(args.recent))
+        downloader.start_date = datetime.datetime.now() - datetime.timedelta(
+            days=args.recent
+        )
+        downloader.end_date = datetime.datetime.now()
+
+    downloader.only_tags = args.tag
+    downloader.limit = args.limit
+    downloader.verbose = args.verbose
+    downloader.auto_delete = args.auto_delete
+    downloader.include_mp4 = args.include_mp4
+    downloader.tag_mode = args.tag_mode
+    if args.ignore:
+        downloader.ignore_tags = args.ignore
+    else:
+        downloader.ignore_tags = ["untagged", "multi", "untagged-by-humans"]
+
+    if downloader.auto_delete:
+        print("Auto delete enabled.")
+
+    server_list = []
+    if args.server:
+        server_list = args.server if isinstance(args.server, list) else [args.server]
+
+    for server in server_list:
+        downloader.process(server)
+
+
+def parse_args():
     parser = argparse.ArgumentParser()
 
     # yapf: disable
@@ -277,51 +362,14 @@ def main():
         dest='recording_id', 
         default=None,
         help='Specify the recording id to download')
+    parser.add_argument('-recording_tags', 
+        action='store_true',
+        dest='recording_tags',
+        help='Download and save recordings based of recording tags (Instead of track based tags)')
     # yapf: enable
 
     args = parser.parse_args()
-
-    downloader = CPTVDownloader()
-    downloader.recording_id = args.recording_id
-    downloader.out_folder = args.out_folder
-    downloader.user = args.user
-    downloader.password = args.password
-
-    if args.start_date:
-        downloader.start_date = parse(args.start_date)
-
-    if args.end_date:
-        downloader.end_date = parse(args.end_date)
-
-    if args.recording_id:
-        print("Downloading Recording - {}".format(downloader.recording_id))
-    elif args.recent:
-        print("Downloading new clips from the past {} days.".format(args.recent))
-        downloader.start_date = datetime.datetime.now() - datetime.timedelta(
-            days=args.recent
-        )
-        downloader.end_date = datetime.datetime.now()
-
-    downloader.only_tags = args.tag
-    downloader.limit = args.limit
-    downloader.verbose = args.verbose
-    downloader.auto_delete = args.auto_delete
-    downloader.include_mp4 = args.include_mp4
-    downloader.tag_mode = args.tag_mode
-    if args.ignore:
-        downloader.ignore_tags = args.ignore
-    else:
-        downloader.ignore_tags = ["untagged", "multi", "untagged-by-humans"]
-
-    if downloader.auto_delete:
-        print("Auto delete enabled.")
-
-    server_list = []
-    if args.server:
-        server_list = args.server if isinstance(args.server, list) else [args.server]
-
-    for server in server_list:
-        downloader.process(server)
+    return args
 
 
 if __name__ == "__main__":
