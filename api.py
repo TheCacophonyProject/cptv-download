@@ -11,7 +11,7 @@ class API(APIBase):
         super().__init__(baseurl, username, password, "user")
 
     def get(self, recording_id):
-        url = urljoin(self._baseurl, "/api/v1/recordings/"+recording_id)
+        url = urljoin(self._baseurl, "/api/v1/recordings/" + recording_id)
         r = requests.get(url, headers=self._auth_header)
         if r.status_code == 200:
             return r.json()
@@ -21,7 +21,9 @@ class API(APIBase):
         return r.raise_for_status()
 
     def get_tracks(self, recording_id):
-        url = urljoin(self._baseurl, "/api/v1/recordings/{}/tracks".format(recording_id))
+        url = urljoin(
+            self._baseurl, "/api/v1/recordings/{}/tracks".format(recording_id)
+        )
         r = requests.get(url, headers=self._auth_header)
         if r.status_code == 200:
             return r.json()
@@ -63,8 +65,8 @@ class API(APIBase):
             params["offset"] = offset
         if tagmode is not None:
             params["tagMode"] = tagmode
-        # if tags is not None:
-        #     params["tags"] = json.dumps(tags)
+        if tags is not None:
+            params["tags"] = json.dumps(tags)
 
         r = requests.get(url, params=params, headers=self._auth_header)
         if r.status_code == 200:
