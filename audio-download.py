@@ -17,6 +17,8 @@ MIME_TO_EXT = {
     "audio/mpeg": "mp3",
 }
 
+local_tz = tzlocal()
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -104,7 +106,6 @@ def download(q, api, args):
         finally:
             q.task_done()
 
-local_tz = tzlocal()
 
 def download_name(r, local_time):
     dt = parsedate(r["recordingDateTime"])
@@ -112,12 +113,12 @@ def download_name(r, local_time):
         dt = dt.astimezone(local_tz)
     device_name = r["Device"]["devicename"]
 
-    mime_type = r.get("rawMimeType")
+    mime_type = r.get("rawMimeType", "audio/mp4")
     if not mime_type:
         raise ValueError("recording has no raw mime type")
-    ext = "." + MIME_TO_EXT[mime_type]
+    ext = MIME_TO_EXT[mime_type]
 
-    return device_name + "-" + dt.strftime("%Y%m%d-%H%M%S") + ext
+    return f"{r['id']}-{device_name}-{dt.strftime('%Y%m%d-%H%M%S')}.{ext}"
 
 
 def iter_to_file(source, filename):
