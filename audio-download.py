@@ -113,7 +113,7 @@ def download_name(r, local_time):
         dt = dt.astimezone(local_tz)
     device_name = r["Device"]["devicename"]
 
-    mime_type = r.get("rawMimeType", "audio/mp4")
+    mime_type = r.get("rawMimeType")
     if not mime_type:
         raise ValueError("recording has no raw mime type")
     ext = MIME_TO_EXT[mime_type]
