@@ -101,9 +101,9 @@ def download_name(r):
     dt = parsedate(r["recordingDateTime"])
     device_name = r["Device"]["devicename"]
 
-    mime_type = r.get("fileMimeType")
+    mime_type = r.get("rawMimeType")
     if not mime_type:
-        raise ValueError("recording has no mime type")
+        raise ValueError("recording has no raw mime type")
     ext = "." + MIME_TO_EXT[mime_type]
 
     return device_name + "-" + dt.strftime("%Y%m%d-%H%M%S") + ext
