@@ -220,8 +220,6 @@ def get_manual_recording_tags(r):
         event = tag["event"]
         if event == "false positive":
             tag_name = "false-positive"
-        elif event == "multiple animals" and not tag["animal"]:
-            tag_name = "multi"
         else:
             tag_name = tag["animal"]
         manual_tags.add(tag_name)
