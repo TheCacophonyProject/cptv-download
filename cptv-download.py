@@ -135,8 +135,7 @@ class CPTVDownloader:
         dt = parse(r["recordingDateTime"])
         file_base = dt.strftime("%Y%m%d-%H%M%S") + "-" + r["Device"]["devicename"]
 
-        tracks = api.get_tracks(r["id"]).get("tracks")
-        r["Tracks"] = tracks
+        r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
 
         tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
@@ -151,9 +150,7 @@ class CPTVDownloader:
             return
 
         if self.only_tags and tags_desc not in self.only_tags:
-            print(
-                'Ignored file "%s" - tag "%s" is not selected' % (file_base, tags_desc)
-            )
+            print(f'Ignored file "{file_base}" - tag "{tags_desc}" is not selected')
             self.not_selected += 1
             return
 
