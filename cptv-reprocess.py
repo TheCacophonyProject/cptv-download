@@ -72,7 +72,6 @@ def parse_args():
         default=None,
         help="Specify the recording id to download",
     )
-    # yapf: enable
 
     args = parser.parse_args()
     return args
