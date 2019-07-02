@@ -56,6 +56,7 @@ class API(APIBase):
         tags=None,
         devices=None,
         where=None,
+        raw_json=False,
     ):
         url = urljoin(self._baseurl, "/api/v1/recordings")
         if where is None:
@@ -83,7 +84,10 @@ class API(APIBase):
 
         r = requests.get(url, params=params, headers=self._auth_header)
         if r.status_code == 200:
-            return r.json()["rows"]
+            if raw_json:
+                return r.json()
+            else:
+                return r.json()["rows"]
         if r.status_code in (400, 422):
             messages = r.json()["message"]
             raise IOError("request failed ({}): {}".format(r.status_code, messages))
