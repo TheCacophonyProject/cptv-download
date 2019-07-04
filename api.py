@@ -97,10 +97,10 @@ class API(APIBase):
         r.raise_for_status()
         yield from r.iter_content(chunk_size=4096)
 
-    def upload_recording(self, devicename, filename, props=None):
+    def upload_recording(self, groupname, devicename, filename, props=None):
         """Upload a recording on behalf of a device.
         """
-        url = urljoin(self._baseurl, "/api/v1/recordings/" + devicename)
+        url = urljoin(self._baseurl, "/api/v1/recordings/device/{}/group/{}".format(devicename, groupname))
 
         if not props:
             if filename.endswith(".cptv"):
