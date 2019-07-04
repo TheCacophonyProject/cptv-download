@@ -5,16 +5,16 @@ import argparse
 from api import API
 
 
-def reprocess(server_url, user, password, recording_id, limit):
+def reprocess(args):
     """ Reprocesses all specified recording from specified server """
 
-    api = API(server_url, user, password)
+    api = API(args.server, args.user, args.password)
 
-    print(f"Querying server {server_url}")
-    print(f"Limit is {limit}")
-    if recording_id:
-        print(f"Recording id is {recording_id}")
-        api.reprocess([recording_id])
+    print(f"Querying server {args.server}")
+    print(f"Limit is {args.limit}")
+    if args.recording_id:
+        print(f"Recording id is {args.recording_id}")
+        api.reprocess([args.recording_id])
         return
 
     where = {
@@ -23,13 +23,22 @@ def reprocess(server_url, user, password, recording_id, limit):
         "processingState": {"$ne": "FINISHED"},
     }
 
-    count = api.query(where=where, limit=limit, raw_json=True)["count"]
+    if args.lower_id:
+        id_where = where.get("id", {})
+        id_where["$gte"] = args.lower_id
+        where["id"] = id_where
+    if args.upper_id:
+        id_where = where.get("id", {})
+        id_where["$lte"] = args.upper_id
+        where["id"] = id_where
+
+    count = api.query(where=where, limit=args.limit, raw_json=True)["count"]
     if count:
         print(f"Still reprocessing {count} records")
         return
 
     where["processingState"] = "FINISHED"
-    rows = api.query(where=where, limit=limit)
+    rows = api.query(where=where, limit=args.limit)
     recording_ids = [row["id"] for row in rows]
     print(f"Reprocessing recording ids: {recording_ids}")
     api.reprocess(recording_ids)
@@ -37,7 +46,7 @@ def reprocess(server_url, user, password, recording_id, limit):
 
 def main():
     args = parse_args()
-    reprocess(args.server, args.user, args.password, args.recording_id, args.limit)
+    reprocess(args)
 
 
 def parse_args():
@@ -61,10 +70,25 @@ def parse_args():
     parser.add_argument(
         "-id",
         dest="recording_id",
+        type=int,
         default=None,
         help="Specify the recording id to download",
     )
+    parser.add_argument(
+        "-upperid",
+        dest="upper_id",
+        type=int,
+        default=None,
+        help="Specify the recording upper id e.g Recording.id <= upper_id",
+    )
 
+    parser.add_argument(
+        "-lowerid",
+        dest="lower_id",
+        type=int,
+        default=None,
+        help="Specify the recording lower id value e.g Recording.id >= lower_id",
+    )
     args = parser.parse_args()
     return args
 

@@ -59,6 +59,7 @@ class API(APIBase):
         raw_json=False,
     ):
         url = urljoin(self._baseurl, "/api/v1/recordings")
+
         if where is None:
             where = {}
         if type_ is not None:
