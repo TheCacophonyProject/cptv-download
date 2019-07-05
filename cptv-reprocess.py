@@ -60,25 +60,16 @@ def parse_args():
 
     parser.add_argument("user", help="API server username")
     parser.add_argument("password", help="API server password")
+    parser.add_argument("-s", "--server", default=["https://api.cacophony.org.nz"], help="API server URL")
     parser.add_argument(
-        "-s",
-        "--server",
-        default=["https://api.cacophony.org.nz"],
-        help="API server URL",
-    )
-    parser.add_argument(
-        "-l",
-        "--limit",
-        type=int,
-        default=100,
-        help="Number of recordings to set to reprocessing",
+        "-l", "--limit", type=int, default=100, help="Number of recordings to set to reprocessing"
     )
     parser.add_argument(
         "-id",
         dest="recording_id",
         type=recording_range,
         default=None,
-        help="Specify the recording id to download",
+        help="Specify a recording range start:end or comma seperated list of recordings to reprocess id,id2,...",
     )
 
     args = parser.parse_args()
