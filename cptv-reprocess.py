@@ -52,19 +52,15 @@ def main():
 def recording_range(range_s):
     id_range = range_s.split(":")
     if len(id_range) > 2:
-        raise ValueError(
-            "Multiple : detected in id arg, exepected format of start:end or id,id2,..."
+        raise argparse.ArgumentTypeError(
+            "multiple ':', exepected format of start:end or id,id2,... "
         )
     elif len(id_range) == 2:
         all(int(x) for x in id_range if x)
-        if id_range[0] and id_range[1]:
-            if int(id_range[0]) > int(id_range[1]):
-                raise ValueError(
-                    "id arg start range is bigger than end range, expected start:end"
-                )
+        if id_range[0] and id_range[1] and (int(id_range[0]) > int(id_range[1])):
+            raise argparse.ArgumentTypeError("start > end, expected start:end")
     elif len(id_range) == 1:
         all(int(x) for x in id_range[0].split(",") if x)
-
     return id_range
 
 
