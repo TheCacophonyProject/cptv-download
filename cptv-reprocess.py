@@ -56,11 +56,18 @@ def recording_range(range_s):
             "multiple ':', exepected format of start:end or id,id2,... "
         )
     elif len(id_range) == 2:
-        all(int(x) for x in id_range if x)
+        try:
+            all(int(x) for x in id_range if x)
+        except ValueError:
+            raise argparse.ArgumentTypeError("must be an int")
+
         if id_range[0] and id_range[1] and (int(id_range[0]) > int(id_range[1])):
             raise argparse.ArgumentTypeError("start > end, expected start:end")
     elif len(id_range) == 1:
-        all(int(x) for x in id_range[0].split(",") if x)
+        try:
+            all(int(x) for x in id_range[0].split(",") if x)
+        except ValueError:
+            raise argparse.ArgumentTypeError("must be an int")
     return id_range
 
 
