@@ -32,6 +32,18 @@ class API(APIBase):
             raise IOError("request failed ({}): {}".format(r.status_code, messages))
         return r.raise_for_status()
 
+    def reprocess(self, recordings: []):
+        url = urljoin(self._baseurl, "/api/v1/reprocess")
+        r = requests.post(
+            url, headers=self._auth_header, data={"recordings": json.dumps(recordings)}
+        )
+        if r.status_code == 200:
+            return r.json()
+        if r.status_code in (400, 422):
+            messages = r.json()["message"]
+            raise IOError("request failed ({}): {}".format(r.status_code, messages))
+        return r.raise_for_status()
+
     def query(
         self,
         type_=None,
@@ -43,10 +55,13 @@ class API(APIBase):
         tagmode=None,
         tags=None,
         devices=None,
+        where=None,
+        raw_json=False,
     ):
         url = urljoin(self._baseurl, "/api/v1/recordings")
 
-        where = {}
+        if where is None:
+            where = {}
         if type_ is not None:
             where["type"] = type_
         if min_secs is not None:
@@ -70,7 +85,10 @@ class API(APIBase):
 
         r = requests.get(url, params=params, headers=self._auth_header)
         if r.status_code == 200:
-            return r.json()["rows"]
+            if raw_json:
+                return r.json()
+            else:
+                return r.json()["rows"]
         if r.status_code in (400, 422):
             messages = r.json()["message"]
             raise IOError("request failed ({}): {}".format(r.status_code, messages))
