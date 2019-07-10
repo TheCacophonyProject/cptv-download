@@ -12,7 +12,7 @@ def reprocess(args):
 
     print(f"Querying server {args.server}")
     print(f"Limit is {args.limit}")
-    if len(args.recording_id) == 1:
+    if args.recording_id and len(args.recording_id) == 1:
         recordings = [
             int(rec_id) for rec_id in args.recording_id[0].split(",") if rec_id
         ]
@@ -20,14 +20,16 @@ def reprocess(args):
         api.reprocess(recordings)
         return
 
-    algorithm_op = "$lt" if args.algorithm_id else "$eq"
-    where = {
-        "additionalMetadata.algorithm": {algorithm_op: args.algorithm_id},
-        "type": "thermalRaw",
-        "processingState": {"$ne": "FINISHED"},
-    }
+    where = {"type": "thermalRaw", "processingState": {"$ne": "FINISHED"}}
+    if args.algorithm_id:
+        where["$or"] = [
+            {"additionalMetadata.algorithm": {"$eq": None}},
+            {"additionalMetadata.algorithm": {"$lt": args.algorithm_id}},
+        ]
+    else:
+        where["additionalMetadata.algorithm"] = {"$eq": None}
 
-    if len(args.recording_id) == 2:
+    if args.recording_id and len(args.recording_id) == 2:
         if args.recording_id[0]:
             where.setdefault("id", {})["$gte"] = int(args.recording_id[0])
         if args.recording_id[1]:
