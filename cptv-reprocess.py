@@ -20,8 +20,9 @@ def reprocess(args):
         api.reprocess(recordings)
         return
 
+    algorithm_op = "$lt" if args.algorithm_id else "$eq"
     where = {
-        "additionalMetadata.algorithm": {"$eq": None},
+        "additionalMetadata.algorithm": {algorithm_op: args.algorithm_id},
         "type": "thermalRaw",
         "processingState": {"$ne": "FINISHED"},
     }
@@ -97,6 +98,13 @@ def parse_args():
         help="Specify a recording range start:end or comma seperated list of recordings to reprocess id,id2,...",
     )
 
+    parser.add_argument(
+        "-alg",
+        dest="algorithm_id",
+        type=int,
+        default=None,
+        help="Only reprocess recordings with an algorithm_id less than this",
+    )
     args = parser.parse_args()
     return args
 
