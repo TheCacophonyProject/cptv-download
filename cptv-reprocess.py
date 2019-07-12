@@ -12,7 +12,7 @@ def reprocess(args):
 
     print(f"Querying server {args.server}")
     print(f"Limit is {args.limit}")
-    if args.recording_id and len(args.recording_id) == 1:
+    if len(args.recording_id) == 1:
         recordings = [
             int(rec_id) for rec_id in args.recording_id[0].split(",") if rec_id
         ]
@@ -29,7 +29,7 @@ def reprocess(args):
     else:
         where["additionalMetadata.algorithm"] = {"$eq": None}
 
-    if args.recording_id and len(args.recording_id) == 2:
+    if len(args.recording_id) == 2:
         if args.recording_id[0]:
             where.setdefault("id", {})["$gte"] = int(args.recording_id[0])
         if args.recording_id[1]:
@@ -96,12 +96,13 @@ def parse_args():
         "-id",
         dest="recording_id",
         type=recording_range,
-        default=None,
+        default=[],
         help="Specify a recording range start:end or comma seperated list of recordings to reprocess id,id2,...",
     )
 
     parser.add_argument(
-        "-alg",
+        "-a",
+        "--algorithm",
         dest="algorithm_id",
         type=int,
         default=None,
