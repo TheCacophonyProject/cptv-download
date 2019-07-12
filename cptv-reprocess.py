@@ -20,11 +20,14 @@ def reprocess(args):
         api.reprocess(recordings)
         return
 
-    where = {
-        "additionalMetadata.algorithm": {"$eq": None},
-        "type": "thermalRaw",
-        "processingState": {"$ne": "FINISHED"},
-    }
+    where = {"type": "thermalRaw", "processingState": {"$ne": "FINISHED"}}
+    if args.algorithm_id:
+        where["$or"] = [
+            {"additionalMetadata.algorithm": {"$eq": None}},
+            {"additionalMetadata.algorithm": {"$lt": args.algorithm_id}},
+        ]
+    else:
+        where["additionalMetadata.algorithm"] = {"$eq": None}
 
     if len(args.recording_id) == 2:
         if args.recording_id[0]:
@@ -93,10 +96,18 @@ def parse_args():
         "-id",
         dest="recording_id",
         type=recording_range,
-        default=None,
+        default=[],
         help="Specify a recording range start:end or comma seperated list of recordings to reprocess id,id2,...",
     )
 
+    parser.add_argument(
+        "-a",
+        "--algorithm",
+        dest="algorithm_id",
+        type=int,
+        default=None,
+        help="Only reprocess recordings with an algorithm_id less than this",
+    )
     args = parser.parse_args()
     return args
 
