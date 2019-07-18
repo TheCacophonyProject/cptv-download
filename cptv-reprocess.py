@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse
+from datetime import datetime, timedelta
 
 from api import API
 
@@ -20,7 +21,12 @@ def reprocess(args):
         api.reprocess(recordings)
         return
 
-    where = {"type": "thermalRaw", "processingState": {"$ne": "FINISHED"}}
+    hour_ago = datetime.now() - timedelta(hours=1)
+    where = {
+        "type": "thermalRaw",
+        "processingState": {"$ne": "FINISHED"},
+        "processingStartTime": {"$or": {"$gt": hour_ago.isoformat(), "$eq": None}},
+    }
     if args.algorithm_id:
         where["$or"] = [
             {"additionalMetadata.algorithm": {"$eq": None}},
@@ -35,9 +41,11 @@ def reprocess(args):
         if args.recording_id[1]:
             where.setdefault("id", {})["$lte"] = int(args.recording_id[1])
 
-    count = api.query(where=where, limit=args.limit, raw_json=True)["count"]
+    q = api.query(where=where, limit=args.limit, raw_json=True)
+    count = q["count"]
     if count:
         print(f"Still reprocessing {count} records")
+        print([row["id"] for row in q["rows"]])
         return
 
     where["processingState"] = "FINISHED"

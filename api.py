@@ -118,7 +118,10 @@ class API(APIBase):
     def upload_recording(self, groupname, devicename, filename, props=None):
         """Upload a recording on behalf of a device.
         """
-        url = urljoin(self._baseurl, "/api/v1/recordings/device/{}/group/{}".format(devicename, groupname))
+        url = urljoin(
+            self._baseurl,
+            "/api/v1/recordings/device/{}/group/{}".format(devicename, groupname),
+        )
 
         if not props:
             if filename.endswith(".cptv"):
