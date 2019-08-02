@@ -90,7 +90,7 @@ def parse_args():
     parser.add_argument(
         "-s",
         "--server",
-        default=["https://api.cacophony.org.nz"],
+        default="https://api.cacophony.org.nz",
         help="API server URL",
     )
     parser.add_argument(
