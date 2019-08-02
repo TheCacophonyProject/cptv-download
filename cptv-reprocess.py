@@ -66,7 +66,8 @@ def recording_range(range_s):
         raise argparse.ArgumentTypeError(
             "multiple ':', exepected format of start:end or id,id2,... "
         )
-    elif len(id_range) == 2:
+
+    if len(id_range) == 2:
         try:
             all(int(x) for x in id_range if x)
         except ValueError:
@@ -117,8 +118,7 @@ def parse_args():
         default=None,
         help="Only reprocess recordings with an algorithm_id less than this",
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
