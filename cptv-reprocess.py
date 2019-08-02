@@ -101,11 +101,12 @@ def parse_args():
         help="Number of recordings to set to reprocessing",
     )
     parser.add_argument(
-        "-id",
+        "-i",
+        "--id",
         dest="recording_id",
         type=recording_range,
         default=[],
-        help="Specify a recording range start:end or comma seperated list of recordings to reprocess id,id2,...",
+        help="Specify a recording range start:end or comma separated list of recordings to reprocess id,id2,...",
     )
 
     parser.add_argument(
