@@ -66,7 +66,8 @@ def recording_range(range_s):
         raise argparse.ArgumentTypeError(
             "multiple ':', exepected format of start:end or id,id2,... "
         )
-    elif len(id_range) == 2:
+
+    if len(id_range) == 2:
         try:
             all(int(x) for x in id_range if x)
         except ValueError:
@@ -90,7 +91,7 @@ def parse_args():
     parser.add_argument(
         "-s",
         "--server",
-        default=["https://api.cacophony.org.nz"],
+        default="https://api.cacophony.org.nz",
         help="API server URL",
     )
     parser.add_argument(
@@ -101,11 +102,12 @@ def parse_args():
         help="Number of recordings to set to reprocessing",
     )
     parser.add_argument(
-        "-id",
+        "-i",
+        "--id",
         dest="recording_id",
         type=recording_range,
         default=[],
-        help="Specify a recording range start:end or comma seperated list of recordings to reprocess id,id2,...",
+        help="Specify a recording range start:end or comma separated list of recordings to reprocess id,id2,...",
     )
 
     parser.add_argument(
@@ -116,8 +118,7 @@ def parse_args():
         default=None,
         help="Only reprocess recordings with an algorithm_id less than this",
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
