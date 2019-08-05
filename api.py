@@ -143,3 +143,21 @@ class API(APIBase):
 
         self._check_response(r)
         return r.json()
+
+    def list_files(self):
+        url = urljoin(self._baseurl, "/api/v1/files")
+        r = requests.get(
+            url, params={"where": "{}", "order": '["id"]'}, headers=self._auth_header
+        )
+        return self._check_response(r)["rows"]
+
+    def download_file(self, file_id):
+        url = urljoin(self._baseurl, "/api/v1/files/" + str(file_id))
+        r = requests.get(url, headers=self._auth_header)
+        d = self._check_response(r)
+        return d["file"], self._download_signed(d["jwt"])
+
+    def delete_file(self, file_id):
+        url = urljoin(self._baseurl, "/api/v1/files/" + str(file_id))
+        r = requests.delete(url, headers=self._auth_header)
+        return self._check_response(r)
