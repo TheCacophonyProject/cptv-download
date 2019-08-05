@@ -34,8 +34,9 @@ class APIBase:
             r.raise_for_status()
 
     def _check_response(self, r):
-        if r.status_code == 400:
-            messages = r.json().get("messages", "")
+        if r.status_code in (400, 422):
+            j = r.json()
+            messages = j.get("messages", j.get("message", ""))
             raise IOError("request failed ({}): {}".format(r.status_code, messages))
         r.raise_for_status()
         return r.json()
