@@ -64,21 +64,33 @@ def main():
         action="store_true",
         help="Convert timestamps in filenames to local time",
     )
+    parser.add_argument(
+        "-i",
+        "--id",
+        type=int,
+        default=None,
+        help="Download a specific recording (other options are ignored)",
+    )
 
     args = parser.parse_args()
 
     args.out_folder = Path(args.out_folder)
     args.out_folder.mkdir(exist_ok=True)
 
+
+
     print("Querying recordings")
     api = API(args.server, args.user, args.password)
-    recordings = api.query(
-        type_="audio",
-        startDate=args.start_date,
-        endDate=args.end_date,
-        devices=args.device,
-        limit=99999,
-    )
+    if args.id is not None:
+        recordings = [api.get(args.id)]
+    else:
+        recordings = api.query(
+            type_="audio",
+            startDate=args.start_date,
+            endDate=args.end_date,
+            devices=args.device,
+            limit=99999,
+        )
     print("Found {} recordings".format(len(recordings)))
 
     pool = Pool(args.workers, download, api, args)
