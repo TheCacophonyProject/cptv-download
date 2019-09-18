@@ -60,7 +60,7 @@ class CPTVDownloader:
         api = API(url, self.user, self.password)
 
         if self.recording_id:
-            recording = api.get(self.recording_id).get("recording")
+            recording = api.get(self.recording_id)
             self._download(recording, api, Path(self.out_folder))
             return
         print("Querying server {0}".format(url))

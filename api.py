@@ -11,38 +11,23 @@ class API(APIBase):
         super().__init__(baseurl, username, password, "user")
 
     def get(self, recording_id):
-        url = urljoin(self._baseurl, "/api/v1/recordings/" + recording_id)
+        url = urljoin(self._baseurl, "/api/v1/recordings/" + str(recording_id))
         r = requests.get(url, headers=self._auth_header)
-        if r.status_code == 200:
-            return r.json()
-        if r.status_code in (400, 422):
-            messages = r.json()["message"]
-            raise IOError("request failed ({}): {}".format(r.status_code, messages))
-        return r.raise_for_status()
+        return check_response(r)["recording"]
 
     def get_tracks(self, recording_id):
         url = urljoin(
             self._baseurl, "/api/v1/recordings/{}/tracks".format(recording_id)
         )
         r = requests.get(url, headers=self._auth_header)
-        if r.status_code == 200:
-            return r.json()
-        if r.status_code in (400, 422):
-            messages = r.json()["message"]
-            raise IOError("request failed ({}): {}".format(r.status_code, messages))
-        return r.raise_for_status()
+        return check_response(r)
 
     def reprocess(self, recordings: []):
         url = urljoin(self._baseurl, "/api/v1/reprocess")
         r = requests.post(
             url, headers=self._auth_header, data={"recordings": json.dumps(recordings)}
         )
-        if r.status_code == 200:
-            return r.json()
-        if r.status_code in (400, 422):
-            messages = r.json()["message"]
-            raise IOError("request failed ({}): {}".format(r.status_code, messages))
-        return r.raise_for_status()
+        return check_response(r)
 
     def query(
         self,
@@ -84,15 +69,11 @@ class API(APIBase):
             params["tags"] = json.dumps(tags)
 
         r = requests.get(url, params=params, headers=self._auth_header)
-        if r.status_code == 200:
-            if raw_json:
-                return r.json()
-            else:
-                return r.json()["rows"]
-        if r.status_code in (400, 422):
-            messages = r.json()["message"]
-            raise IOError("request failed ({}): {}".format(r.status_code, messages))
-        return r.raise_for_status()
+        data = check_response(r)
+        if raw_json:
+            return data
+        else:
+            return data["rows"]
 
     def download(self, recording_id):
         return self._download_recording(recording_id, "downloadFileJWT")
@@ -161,3 +142,13 @@ class API(APIBase):
         url = urljoin(self._baseurl, "/api/v1/files/" + str(file_id))
         r = requests.delete(url, headers=self._auth_header)
         return self._check_response(r)
+
+
+def check_response(r):
+    data = r.json()
+    if r.status_code == 200:
+        return data
+    if r.status_code in (400, 422):
+        message = data.get("message") or data.get("messages")
+        raise IOError("request failed ({}): {}".format(r.status_code, message))
+    r.raise_for_status()
