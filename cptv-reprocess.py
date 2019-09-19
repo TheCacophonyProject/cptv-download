@@ -25,7 +25,7 @@ def reprocess(args):
     where = {
         "type": "thermalRaw",
         "processingState": {"$ne": "FINISHED"},
-        "processingStartTime": {"$or": {"$gt": hour_ago.isoformat(), "$eq": None}},
+        "processingStartTime": {"$or": {"$gte": hour_ago.isoformat(), "$eq": None}},
     }
     if args.algorithm_id:
         where["$or"] = [
@@ -49,6 +49,7 @@ def reprocess(args):
         return
 
     where["processingState"] = "FINISHED"
+    where["processingStartTime"] = {"$or": {"$lt": hour_ago.isoformat(), "$eq": None}}
     rows = api.query(where=where, limit=args.limit)
     recording_ids = [row["id"] for row in rows]
     print(f"Reprocessing recording ids: {recording_ids}")
@@ -89,10 +90,7 @@ def parse_args():
     parser.add_argument("user", help="API server username")
     parser.add_argument("password", help="API server password")
     parser.add_argument(
-        "-s",
-        "--server",
-        default="https://api.cacophony.org.nz",
-        help="API server URL",
+        "-s", "--server", default="https://api.cacophony.org.nz", help="API server URL"
     )
     parser.add_argument(
         "-l",
