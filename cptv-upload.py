@@ -20,14 +20,12 @@ def main():
 
     api = API(args.server_url, args.username, args.password)
     if os.path.isdir(args.filename):
-        print("uploading multiple files")
         for file in os.listdir(args.filename):
             if file.endswith(".cptv"):
                 filepath = os.path.join(args.filename, file)
                 print(filepath)
                 api.upload_recording(args.groupname, args.devicename, filepath)
     else:
-        print("uploading just one recording")
         api.upload_recording(args.groupname, args.devicename, args.filename)
 
 if __name__ == "__main__":
