@@ -309,7 +309,7 @@ def main():
     if args.ignore:
         downloader.ignore_tags = args.ignore
     else:
-        downloader.ignore_tags = ["untagged", "multi", "untagged-by-humans"]
+        downloader.ignore_tags = ["untagged", "untagged-by-humans"]
 
     if downloader.auto_delete:
         print("Auto delete enabled.")
