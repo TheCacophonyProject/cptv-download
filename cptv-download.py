@@ -69,21 +69,29 @@ class CPTVDownloader:
         print("Dates are {0} - {1}".format(self.start_date, self.end_date))
         print("Required tags are {0}".format(self.only_tags))
         print("Ignore tags are {0}".format(self.ignore_tags))
-
-        rows = api.query(
-            limit=self.limit,
-            startDate=self.start_date,
-            endDate=self.end_date,
-            tagmode=self.tag_mode,
-            tags=self.only_tags,
-        )
-
-        if self.auto_delete:
-            self.update_file_locations()
-
         pool = Pool(self.workers, self._downloader, api, Path(self.out_folder))
-        for row in rows:
-            pool.put(row)
+        offset = 0
+        remaining = self.limit
+        while self.limit is None or offset < self.limit:
+            rows = api.query(
+                limit=remaining,
+                startDate=self.start_date,
+                endDate=self.end_date,
+                tagmode=self.tag_mode,
+                tags=self.only_tags,
+                offset=offset,
+            )
+            if len(rows) == 0:
+                break
+            offset += len(rows)
+            if remaining:
+                remaining -= len(rows)
+
+            if self.auto_delete:
+                self.update_file_locations()
+
+            for row in rows:
+                pool.put(row)
         pool.stop()
 
     def update_file_locations(self):
@@ -292,7 +300,8 @@ def main():
         downloader.end_date = datetime.datetime.now()
 
     downloader.only_tags = args.tag
-    downloader.limit = args.limit
+    if args.limit > 0:
+        downloader.limit = args.limit
     downloader.verbose = args.verbose
     downloader.auto_delete = args.auto_delete
     downloader.include_mp4 = args.include_mp4
@@ -300,7 +309,7 @@ def main():
     if args.ignore:
         downloader.ignore_tags = args.ignore
     else:
-        downloader.ignore_tags = ["untagged", "multi", "untagged-by-humans"]
+        downloader.ignore_tags = ["untagged", "untagged-by-humans"]
 
     if downloader.auto_delete:
         print("Auto delete enabled.")
@@ -358,22 +367,23 @@ def parse_args():
         help='If enabled clips found in sub-folders other than their tag folder will be deleted.')
     parser.add_argument(
         '-l', '--limit',
+        type=int,
         default=1000,
         help='Limit number of downloads')
-    parser.add_argument('--mp4', 
-        dest='include_mp4', 
-        action='store_true', 
+    parser.add_argument('--mp4',
+        dest='include_mp4',
+        action='store_true',
         default=False,
         help='add if you want to download mp4 files')
-    parser.add_argument('-m', '--tagmode', 
-        dest='tag_mode', 
+    parser.add_argument('-m', '--tagmode',
+        dest='tag_mode',
         default='automatic+human',
         help='Select videos by only a particular tag mode.  Default is only selects videos tagged by both humans and automatic')
-    parser.add_argument('-id', 
-        dest='recording_id', 
+    parser.add_argument('-id',
+        dest='recording_id',
         default=None,
         help='Specify the recording id to download')
-    parser.add_argument('-recording_tags', 
+    parser.add_argument('-recording_tags',
         action='store_true',
         dest='recording_tags',
         help='Download and save recordings based of recording tags (Instead of track based tags)')
