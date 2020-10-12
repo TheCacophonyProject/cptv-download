@@ -71,10 +71,10 @@ class CPTVDownloader:
         print("Ignore tags are {0}".format(self.ignore_tags))
         pool = Pool(self.workers, self._downloader, api, Path(self.out_folder))
         offset = 0
-        limit = self.limit
+        remaining = self.limit
         while self.limit is None or offset < self.limit:
             rows = api.query(
-                limit=limit,
+                limit=remaining,
                 startDate=self.start_date,
                 endDate=self.end_date,
                 tagmode=self.tag_mode,
@@ -84,8 +84,8 @@ class CPTVDownloader:
             if len(rows) == 0:
                 break
             offset += len(rows)
-            if limit:
-                limit -= len(rows)
+            if remaining:
+                remaining -= len(rows)
 
             if self.auto_delete:
                 self.update_file_locations()
