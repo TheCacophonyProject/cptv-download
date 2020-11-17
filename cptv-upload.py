@@ -23,7 +23,7 @@ def main():
         for file in os.listdir(args.filename):
             if file.endswith(".cptv"):
                 filepath = os.path.join(args.filename, file)
-                print(args.devicename)
+                print(filepath)
                 api.upload_recording(args.groupname, args.devicename, filepath)
     else:
         api.upload_recording(args.groupname, args.devicename, args.filename)
