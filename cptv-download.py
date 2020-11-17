@@ -8,7 +8,7 @@ import os
 
 from dateutil.parser import parse
 
-from api import API
+from cacophonyapi.user import UserAPI as API
 from pool import Pool
 
 SPECIAL_DIRS = ["test", "hard"]

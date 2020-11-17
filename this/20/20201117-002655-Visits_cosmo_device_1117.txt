@@ -1,0 +1,103 @@
+{
+    "id": 134,
+    "type": "thermalRaw",
+    "recordingDateTime": "2020-11-17T00:26:55.000Z",
+    "rawMimeType": "application/x-cptv",
+    "fileMimeType": null,
+    "processingState": "getMetadata",
+    "duration": 30,
+    "location": null,
+    "batteryLevel": 98,
+    "DeviceId": 108,
+    "GroupId": 37,
+    "comment": "hmmm",
+    "additionalMetadata": "",
+    "Group": {
+        "groupname": "Visits_cosmos_group_1117"
+    },
+    "Tags": [],
+    "Tracks": [
+        {
+            "id": 42,
+            "data": {
+                "foo": [
+                    [
+                        1,
+                        2
+                    ],
+                    [
+                        3,
+                        4
+                    ]
+                ],
+                "end_s": 20,
+                "start_s": 10
+            },
+            "archivedAt": null,
+            "createdAt": "2020-11-17T00:26:57.605Z",
+            "updatedAt": "2020-11-17T00:26:57.605Z",
+            "AlgorithmId": 16,
+            "TrackTags": [
+                {
+                    "id": 50,
+                    "what": "possum",
+                    "confidence": 0.9,
+                    "automatic": true,
+                    "data": [
+                        "what",
+                        3
+                    ],
+                    "createdAt": "2020-11-17T00:26:57.639Z",
+                    "updatedAt": "2020-11-17T00:26:57.639Z",
+                    "TrackId": 42,
+                    "User": {
+                        "username": "admin_test"
+                    }
+                }
+            ]
+        },
+        {
+            "id": 43,
+            "data": {
+                "foo": [
+                    [
+                        1,
+                        2
+                    ],
+                    [
+                        3,
+                        4
+                    ]
+                ],
+                "end_s": 90,
+                "start_s": 80
+            },
+            "archivedAt": null,
+            "createdAt": "2020-11-17T00:26:57.720Z",
+            "updatedAt": "2020-11-17T00:26:57.720Z",
+            "AlgorithmId": 16,
+            "TrackTags": [
+                {
+                    "id": 51,
+                    "what": "possum",
+                    "confidence": 0.9,
+                    "automatic": false,
+                    "data": [
+                        "what",
+                        3
+                    ],
+                    "createdAt": "2020-11-17T00:26:57.753Z",
+                    "updatedAt": "2020-11-17T00:26:57.753Z",
+                    "TrackId": 43,
+                    "User": {
+                        "username": "admin_test"
+                    }
+                }
+            ]
+        }
+    ],
+    "Device": {
+        "devicename": "Visits_cosmo_device_1117",
+        "id": 108
+    }
+}

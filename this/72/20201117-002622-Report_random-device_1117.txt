@@ -1,0 +1,102 @@
+{
+    "id": 96,
+    "type": "thermalRaw",
+    "recordingDateTime": "2020-11-17T00:26:22.369Z",
+    "rawMimeType": "application/x-cptv",
+    "fileMimeType": null,
+    "processingState": "getMetadata",
+    "duration": 10,
+    "location": {
+        "type": "Point",
+        "coordinates": [
+            20.00025,
+            20.00025
+        ]
+    },
+    "batteryLevel": 98,
+    "DeviceId": 70,
+    "GroupId": 1,
+    "comment": "foo",
+    "additionalMetadata": "",
+    "Group": {
+        "groupname": "test-group"
+    },
+    "Tags": [],
+    "Tracks": [
+        {
+            "id": 30,
+            "data": {
+                "foo": [
+                    [
+                        1,
+                        2
+                    ],
+                    [
+                        3,
+                        4
+                    ]
+                ],
+                "end_s": 20,
+                "start_s": 10
+            },
+            "archivedAt": null,
+            "createdAt": "2020-11-17T00:26:23.048Z",
+            "updatedAt": "2020-11-17T00:26:23.048Z",
+            "AlgorithmId": 16,
+            "TrackTags": [
+                {
+                    "id": 31,
+                    "what": "possum",
+                    "confidence": 0.9,
+                    "automatic": true,
+                    "data": [
+                        "what",
+                        3
+                    ],
+                    "createdAt": "2020-11-17T00:26:23.086Z",
+                    "updatedAt": "2020-11-17T00:26:23.086Z",
+                    "TrackId": 30,
+                    "User": {
+                        "username": "admin_test"
+                    }
+                },
+                {
+                    "id": 32,
+                    "what": "rat",
+                    "confidence": 0.8,
+                    "automatic": false,
+                    "data": [
+                        "what",
+                        3
+                    ],
+                    "createdAt": "2020-11-17T00:26:23.121Z",
+                    "updatedAt": "2020-11-17T00:26:23.121Z",
+                    "TrackId": 30,
+                    "User": {
+                        "username": "admin_test"
+                    }
+                },
+                {
+                    "id": 33,
+                    "what": "stoat",
+                    "confidence": 0.8,
+                    "automatic": false,
+                    "data": [
+                        "foo",
+                        1
+                    ],
+                    "createdAt": "2020-11-17T00:26:23.156Z",
+                    "updatedAt": "2020-11-17T00:26:23.156Z",
+                    "TrackId": 30,
+                    "User": {
+                        "username": "admin_test"
+                    }
+                }
+            ]
+        }
+    ],
+    "Device": {
+        "devicename": "Report_random-device_1117",
+        "id": 70
+    }
+}

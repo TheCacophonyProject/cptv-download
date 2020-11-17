@@ -1,0 +1,93 @@
+{
+    "id": 87,
+    "type": "thermalRaw",
+    "recordingDateTime": "2020-11-17T00:26:14.509Z",
+    "rawMimeType": "application/x-cptv",
+    "fileMimeType": null,
+    "processingState": "getMetadata",
+    "duration": 10,
+    "location": null,
+    "batteryLevel": 98,
+    "DeviceId": 68,
+    "GroupId": 27,
+    "comment": "hmmm",
+    "additionalMetadata": "",
+    "Group": {
+        "groupname": "RecordingsGetByTags_lucys_group_1117"
+    },
+    "Tags": [
+        {
+            "id": 15,
+            "what": "cool",
+            "detail": null,
+            "confidence": null,
+            "startTime": null,
+            "duration": null,
+            "automatic": false,
+            "version": 256,
+            "createdAt": "2020-11-17T00:26:14.919Z",
+            "taggerId": 47,
+            "tagger": {
+                "username": "RecordingsGetByTags_lucy_1117",
+                "id": 47
+            },
+            "animal": "cool",
+            "event": null
+        }
+    ],
+    "Tracks": [
+        {
+            "id": 20,
+            "data": {
+                "foo": [
+                    [
+                        1,
+                        2
+                    ],
+                    [
+                        3,
+                        4
+                    ]
+                ],
+                "end_s": 20,
+                "start_s": 10
+            },
+            "archivedAt": null,
+            "createdAt": "2020-11-17T00:26:14.955Z",
+            "updatedAt": "2020-11-17T00:26:14.955Z",
+            "AlgorithmId": 16,
+            "TrackTags": [
+                {
+                    "id": 17,
+                    "what": "possum",
+                    "confidence": 0.7,
+                    "automatic": true,
+                    "data": {},
+                    "createdAt": "2020-11-17T00:26:14.989Z",
+                    "updatedAt": "2020-11-17T00:26:14.989Z",
+                    "TrackId": 20,
+                    "User": {
+                        "username": "admin_test"
+                    }
+                },
+                {
+                    "id": 18,
+                    "what": "possum",
+                    "confidence": 0.7,
+                    "automatic": false,
+                    "data": {},
+                    "createdAt": "2020-11-17T00:26:15.024Z",
+                    "updatedAt": "2020-11-17T00:26:15.024Z",
+                    "TrackId": 20,
+                    "User": {
+                        "username": "RecordingsGetByTags_lucy_1117"
+                    }
+                }
+            ]
+        }
+    ],
+    "Device": {
+        "devicename": "RecordingsGetByTags_Rec_1117",
+        "id": 68
+    }
+}

@@ -1,0 +1,74 @@
+{
+    "id": 94,
+    "type": "thermalRaw",
+    "recordingDateTime": "2020-11-17T00:26:19.504Z",
+    "rawMimeType": "application/x-cptv",
+    "fileMimeType": null,
+    "processingState": "getMetadata",
+    "duration": 10,
+    "location": null,
+    "batteryLevel": 98,
+    "DeviceId": 69,
+    "GroupId": 28,
+    "comment": "hmmm",
+    "additionalMetadata": "",
+    "Group": {
+        "groupname": "RecordingsGetByTags_julies_group_1117"
+    },
+    "Tags": [],
+    "Tracks": [
+        {
+            "id": 29,
+            "data": {
+                "foo": [
+                    [
+                        1,
+                        2
+                    ],
+                    [
+                        3,
+                        4
+                    ]
+                ],
+                "end_s": 20,
+                "start_s": 10
+            },
+            "archivedAt": null,
+            "createdAt": "2020-11-17T00:26:19.970Z",
+            "updatedAt": "2020-11-17T00:26:19.970Z",
+            "AlgorithmId": 16,
+            "TrackTags": [
+                {
+                    "id": 29,
+                    "what": "bird",
+                    "confidence": 0.7,
+                    "automatic": true,
+                    "data": {},
+                    "createdAt": "2020-11-17T00:26:20.002Z",
+                    "updatedAt": "2020-11-17T00:26:20.002Z",
+                    "TrackId": 29,
+                    "User": {
+                        "username": "admin_test"
+                    }
+                },
+                {
+                    "id": 30,
+                    "what": "bird",
+                    "confidence": 0.7,
+                    "automatic": false,
+                    "data": {},
+                    "createdAt": "2020-11-17T00:26:20.038Z",
+                    "updatedAt": "2020-11-17T00:26:20.038Z",
+                    "TrackId": 29,
+                    "User": {
+                        "username": "RecordingsGetByTags_julie_1117"
+                    }
+                }
+            ]
+        }
+    ],
+    "Device": {
+        "devicename": "RecordingsGetByTags_Rec_11172",
+        "id": 69
+    }
+}
