@@ -6,7 +6,7 @@ import argparse
 from dateutil.parser import parse as parsedate
 from dateutil.tz import tzlocal
 
-from api import API
+from cacophonyapi.user import UserAPI as API
 from pool import Pool
 
 

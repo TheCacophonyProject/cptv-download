@@ -3,7 +3,7 @@
 import argparse
 from datetime import datetime, timedelta
 
-from api import API
+from cacophonyapi.user import UserAPI as API
 
 
 def reprocess(args):

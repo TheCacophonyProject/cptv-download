@@ -2,7 +2,7 @@ import argparse
 import glob
 import os
 
-from api import API
+from cacophonyapi.user import UserAPI as API
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
         for file in os.listdir(args.filename):
             if file.endswith(".cptv"):
                 filepath = os.path.join(args.filename, file)
-                print(filepath)
+                print(args.devicename)
                 api.upload_recording(args.groupname, args.devicename, filepath)
     else:
         api.upload_recording(args.groupname, args.devicename, args.filename)
