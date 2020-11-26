@@ -8,7 +8,7 @@ install:
   - cd cacophony-api
   - docker-compose build && docker-compose up --force-recreate -d
   - cd test
-  - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
+  - docker cp db-seed.sql cacophony-api:/db-seed.sql
   - cd ../..
 before_script:
   - ./cacophony-api/wait-for-api || { docker ps; docker logs cacophony-api; exit 1; }
