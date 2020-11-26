@@ -140,8 +140,17 @@ class CPTVDownloader:
         return description, out_dir
 
     def _download(self, r, api, out_base):
-        dt = parse(r["recordingDateTime"])
-        file_base = dt.strftime("%Y%m%d-%H%M%S") + "-" + r["Device"]["devicename"]
+        dtstring = ""
+        if r["recordingDateTime"]:
+            #if recording has been processed it will have a recordingDateTime
+            dt = parse(r["recordingDateTime"])
+            dtstring = dt.strftime("%Y%m%d-%H%M%S")
+        else:
+            #otherwise label the file as unprocessed and add the time to give it a unique name 
+            #so that it still downloads
+            dtstring = "unprocessed-" + datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
+        file_base = dtstring + "-" + r["Device"]["devicename"]
 
         r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
 

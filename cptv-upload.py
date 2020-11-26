@@ -17,7 +17,6 @@ def main():
     parser.add_argument("filename", help="File to upload. If it is a directory will upload all cptv files in that dir")
 
     args = parser.parse_args()
-
     api = API(args.server_url, args.username, args.password)
     if os.path.isdir(args.filename):
         for file in os.listdir(args.filename):
