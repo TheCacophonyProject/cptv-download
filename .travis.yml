@@ -10,6 +10,7 @@ install:
   - cd test
   - docker cp db-seed.sql cacophony-api:/db-seed.sql
   - cd ../..
+  - pip install -r requirements.txt
 before_script:
   - ./cacophony-api/wait-for-api || { docker ps; docker logs cacophony-api; exit 1; }
   - sudo docker exec cacophony-api sh -c "sudo -i -u postgres psql cacophonytest -f/db-seed.sql"
