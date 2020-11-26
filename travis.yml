@@ -1,0 +1,19 @@
+services:
+    - docker
+
+language: python
+
+install:
+  - git clone "https://github.com/TheCacophonyProject/cacophony-api"
+  - cd cacophony-api
+  - docker-compose build && docker-compose up --force-recreate -d
+  - cd ..
+  - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
+
+before_script:
+  - ./cacophony-api/wait-for-api || { docker ps; docker logs cacophony-api; exit 1; }
+  - sudo docker exec cacophony-api sh -c "sudo -i -u postgres psql cacophonytest -f/db-seed.sql"
+
+script:
+    - cd tests
+    - pytest -s

@@ -5,6 +5,7 @@ import argparse
 import datetime
 import json
 import os
+import random
 
 from dateutil.parser import parse
 
@@ -146,9 +147,8 @@ class CPTVDownloader:
             dt = parse(r["recordingDateTime"])
             dtstring = dt.strftime("%Y%m%d-%H%M%S")
         else:
-            #otherwise label the file as unprocessed and add the time to give it a unique name 
-            #so that it still downloads
-            dtstring = "unprocessed-" + datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+            #otherwise label the file as unprocessed and append a random number incase there is more than one
+            dtstring = "unprocessed-" + str(random.random())
 
         file_base = dtstring + "-" + r["Device"]["devicename"]
 
