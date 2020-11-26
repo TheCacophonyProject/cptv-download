@@ -7,9 +7,8 @@ install:
   - git clone "https://github.com/TheCacophonyProject/cacophony-api"
   - cd cacophony-api
   - docker-compose build && docker-compose up --force-recreate -d
-  - cd test
-  - docker cp db-seed.sql cacophony-api:/db-seed.sql
-  - cd ../..
+  - cd ..
+  - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
   - pip install -r requirements.txt
 before_script:
   - ./cacophony-api/wait-for-api || { docker ps; docker logs cacophony-api; exit 1; }
