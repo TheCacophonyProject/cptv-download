@@ -2,6 +2,7 @@ import pytest
 import os
 import tempfile
 import subprocess
+import shutil
 
 from cacophonyapi.user import UserAPI
 
@@ -44,7 +45,7 @@ class TestUploadDownload:
                     ]
                 )
 
-        os.system('rm -r downloads1')
+        shutil.rmtree('downloads1')
        
         assert result.returncode == 0
 
