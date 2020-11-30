@@ -26,7 +26,7 @@ class TestUploadDownload:
     
     def test_download(self, test_config):
         if os.path.exists('downloads1'):
-            os.system('rm -r downloads1')
+           shutil.rmtree('downloads1') 
 
         os.mkdir('downloads1')
         result = subprocess.run(
