@@ -144,14 +144,12 @@ class CPTVDownloader:
         dtstring = ""
         #if r["recordingDateTime"]:
             #if recording has been processed it will have a recordingDateTime
-        try:
-            if r["recordingDateTime"] == None:
-                raise ValueError()
-            dt = parse(r["recordingDateTime"])
-
-            dtstring = dt.strftime("%Y%m%d-%H%M%S")
-        except ValueError as e:
-            dtstring = "unprocessed-"
+        if "recordingDateTime" in r:
+            try:
+                dt = parse(r.get("recordingDateTime", " "))
+                dtstring = dt.strftime("%Y%m%d-%H%M%S")
+            except (ValueError, TypeError):
+                dtstring = "unprocessed-"
 
         file_base = str(r["id"]) + "-" + dtstring + "-" + r["Device"]["devicename"]
 
