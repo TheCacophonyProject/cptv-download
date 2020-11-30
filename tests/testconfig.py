@@ -13,7 +13,6 @@ class TestConfig:
     admin_password = attr.ib(default="admin_test")
     admin_email = attr.ib(default="admin@email.com")
     default_group = attr.ib(default="test-group")
-    fileprocessing_url = attr.ib(default="http://127.0.0.1:2008")
 
     def load_config(self):
         if not Path(CONFIG_FILE).is_file():

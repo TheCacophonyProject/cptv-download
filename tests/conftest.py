@@ -8,8 +8,6 @@ import subprocess
 import pytest
 import os
 
-from .helper import Helper
-from .fileprocessingapi import FileProcessingAPI
 from .testconfig import TestConfig
 from cacophonyapi.user import UserAPI 
 
@@ -17,16 +15,6 @@ from cacophonyapi.user import UserAPI
 @pytest.fixture(scope="module")
 def test_config():
     return TestConfig().load_config()
-
-
-@pytest.fixture(scope="module")
-def helper():
-    return Helper()
-
-
-@pytest.fixture(scope="module")
-def file_processing(test_config):
-    return FileProcessingAPI(test_config.fileprocessing_url)
 
 
 def pytest_addoption(parser):
