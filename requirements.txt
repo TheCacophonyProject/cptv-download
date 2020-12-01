@@ -1,4 +1,6 @@
 requests
+pytest
 python-dateutil
 requests-toolbelt
 cptv
+cacophonyapi

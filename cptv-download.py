@@ -5,10 +5,11 @@ import argparse
 import datetime
 import json
 import os
+import random
 
 from dateutil.parser import parse
 
-from api import API
+from cacophonyapi.user import UserAPI as API
 from pool import Pool
 
 SPECIAL_DIRS = ["test", "hard"]
@@ -140,8 +141,15 @@ class CPTVDownloader:
         return description, out_dir
 
     def _download(self, r, api, out_base):
-        dt = parse(r["recordingDateTime"])
-        file_base = dt.strftime("%Y%m%d-%H%M%S") + "-" + r["Device"]["devicename"]
+        dtstring = ""
+        if "recordingDateTime" in r:
+            try:
+                dt = parse(r.get("recordingDateTime", " "))
+                dtstring = dt.strftime("%Y%m%d-%H%M%S")
+            except (ValueError, TypeError):
+                dtstring = "unprocessed"
+
+        file_base = str(r["id"]) + "-" + dtstring + "-" + r["Device"]["devicename"]
 
         r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
 
