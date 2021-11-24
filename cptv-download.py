@@ -319,10 +319,6 @@ def main():
     downloader.auto_delete = args.auto_delete
     downloader.include_mp4 = args.include_mp4
     downloader.tag_mode = args.tag_mode
-    if args.ignore:
-        downloader.ignore_tags = args.ignore
-    else:
-        downloader.ignore_tags = ["untagged", "untagged-by-humans"]
 
     if downloader.auto_delete:
         print("Auto delete enabled.")
@@ -366,7 +362,7 @@ def parse_args():
     parser.add_argument(
         '-i', '--ignore',
         action='append',
-        default=None,
+        default=['untagged', 'part', 'untagged-by-humans' ,'unknown','unidentified'],
         help='Tag to ignore - can use multiple times')
     parser.add_argument(
         '-v', '--verbose',
@@ -381,7 +377,7 @@ def parse_args():
     parser.add_argument(
         '-l', '--limit',
         type=int,
-        default=1000,
+        default=0,
         help='Limit number of downloads')
     parser.add_argument('--mp4',
         dest='include_mp4',
