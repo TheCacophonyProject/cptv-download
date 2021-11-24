@@ -160,7 +160,7 @@ class CPTVDownloader:
                 tracker_version = 9
 
         file_base = str(r["id"]) + "-" + dtstring + "-" + r["deviceName"]
-
+        r["tracks"] = api.get_tracks(r["id"]).get("tracks")
         tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
             print('No valid out directory for file "%s"' % file_base)
