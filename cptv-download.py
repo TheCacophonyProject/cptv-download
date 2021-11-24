@@ -11,8 +11,12 @@ from dateutil.parser import parse
 
 from cacophonyapi.user import UserAPI as API
 from pool import Pool
+from dateutil.parser import parse
 
 SPECIAL_DIRS = ["test", "hard"]
+
+# anything before this is tracker version 9
+OLD_TRACKER = parse("2021-06-01 17:02:30.592 +1200")
 
 
 class CPTVDownloader:
@@ -53,7 +57,7 @@ class CPTVDownloader:
             print(message)
 
     def process(self, url):
-        """ Downloads all requested files from specified server """
+        """Downloads all requested files from specified server"""
         self.ignored = 0
         self.not_selected = 0
         self.processed = 0
@@ -72,6 +76,8 @@ class CPTVDownloader:
         print("Ignore tags are {0}".format(self.ignore_tags))
         pool = Pool(self.workers, self._downloader, api, Path(self.out_folder))
         offset = 0
+        if len(self.only_tags) == 0:
+            self.only_tags = None
         remaining = self.limit
         while self.limit is None or offset < self.limit:
             rows = api.query(
@@ -96,7 +102,7 @@ class CPTVDownloader:
         pool.stop()
 
     def update_file_locations(self):
-        """ Scans output folder building a list of all files. """
+        """Scans output folder building a list of all files."""
         self.file_list = {}
 
         for root, _, files in os.walk(self.out_folder):
@@ -106,7 +112,7 @@ class CPTVDownloader:
                 self.file_list[file].append(root)
 
     def _downloader(self, q, api, out_base):
-        """ Worker to handle downloading of files. """
+        """Worker to handle downloading of files."""
         while True:
 
             r = q.get()
@@ -142,16 +148,18 @@ class CPTVDownloader:
 
     def _download(self, r, api, out_base):
         dtstring = ""
+        tracker_version = 10
         if "recordingDateTime" in r:
             try:
                 dt = parse(r.get("recordingDateTime", " "))
+                if dt < OLD_TRACKER:
+                    tracker_version = 9
                 dtstring = dt.strftime("%Y%m%d-%H%M%S")
             except (ValueError, TypeError):
                 dtstring = "unprocessed"
+                tracker_version = 9
 
-        file_base = str(r["id"]) + "-" + dtstring + "-" + r["Device"]["devicename"]
-
-        r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
+        file_base = str(r["id"]) + "-" + dtstring + "-" + r["deviceName"]
 
         tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
@@ -169,14 +177,12 @@ class CPTVDownloader:
             print(f'Ignored file "{file_base}" - tag "{tags_desc}" is not selected')
             self.not_selected += 1
             return
-
         fullpath = out_dir / file_base
         if self.auto_delete:
             self._delete_existing(file_base, out_dir)
 
         os.makedirs(out_dir, exist_ok=True)
         print("Processing ", file_base)
-
         if iter_to_file(fullpath.with_suffix(".cptv"), api.download_raw(r["id"])):
             print(format_row(r) + ".cptv" + " [{}]".format(out_dir))
 
@@ -186,6 +192,7 @@ class CPTVDownloader:
 
         if self.include_metadata:
             meta_file = fullpath.with_suffix(".txt")
+            r["tracker_version"] = tracker_version
             r["additionalMetadata"] = ""
             if not os.path.exists(meta_file):
                 json.dump(r, open(meta_file, "w"), indent=4)
@@ -204,7 +211,7 @@ class CPTVDownloader:
 
 
 def remove_file(file):
-    """ Delete a file (if it exists). """
+    """Delete a file (if it exists)."""
     try:
         os.remove(file)
     except FileNotFoundError:
@@ -224,7 +231,7 @@ def get_distributed_folder(name, num_folders=256, seed=31):
 
 
 def get_manual_recording_tags(r):
-    """ Gets all distinct recording based tags """
+    """Gets all distinct recording based tags"""
     manual_tags = set()
     tags = r["Tags"]
     for tag in tags:
@@ -241,11 +248,11 @@ def get_manual_recording_tags(r):
 
 
 def get_manual_track_tags(r):
-    """ Gets all distinct track based tags """
+    """Gets all distinct track based tags"""
     manual_tags = set()
 
-    for track in r["Tracks"]:
-        track_tags = track.get("TrackTags", [])
+    for track in r["tracks"]:
+        track_tags = track.get("tags", [])
         for track_tag in track_tags:
             if not track_tag["automatic"]:
                 manual_tags.add(track_tag["what"])
@@ -253,7 +260,7 @@ def get_manual_track_tags(r):
 
 
 def get_tags_descriptor(manual_tags):
-    """ Returns a string describing all tags """
+    """Returns a string describing all tags"""
     if not manual_tags:
         return "untagged"
     if len(manual_tags) >= 2:
@@ -268,9 +275,7 @@ def get_tags_descriptor(manual_tags):
 
 
 def format_row(row):
-    return "{} {} {}s".format(
-        row["id"], row["Device"]["devicename"], row.get("duration")
-    )
+    return "{} {} {}s".format(row["id"], row["deviceName"], row.get("duration"))
 
 
 def iter_to_file(filename, source, overwrite=False):
@@ -385,7 +390,7 @@ def parse_args():
         help='add if you want to download mp4 files')
     parser.add_argument('-m', '--tagmode',
         dest='tag_mode',
-        default='automatic+human',
+        default='human-tagged',
         help='Select videos by only a particular tag mode.  Default is only selects videos tagged by both humans and automatic')
     parser.add_argument('-id',
         dest='recording_id',
