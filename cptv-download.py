@@ -148,6 +148,8 @@ class CPTVDownloader:
 
     def _download(self, r, api, out_base):
         dtstring = ""
+        rawMime = r.get("rawMimeType", "application/x-cptv")
+        extension = ".cptv" if rawMime == "application/x-cptv" else ".mp4"
         tracker_version = 10
         if "recordingDateTime" in r:
             try:
@@ -161,7 +163,7 @@ class CPTVDownloader:
 
         file_base = str(r["id"]) + "-" + dtstring + "-" + r["deviceName"]
         r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
-        
+
         tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
             print('No valid out directory for file "%s"' % file_base)
@@ -180,12 +182,12 @@ class CPTVDownloader:
             return
         fullpath = out_dir / file_base
         if self.auto_delete:
-            self._delete_existing(file_base, out_dir)
+            self._delete_existing(file_base.with_suffix(extension), out_dir)
 
         os.makedirs(out_dir, exist_ok=True)
         print("Processing ", file_base)
-        if iter_to_file(fullpath.with_suffix(".cptv"), api.download_raw(r["id"])):
-            print(format_row(r) + ".cptv" + " [{}]".format(out_dir))
+        if iter_to_file(fullpath.with_suffix(extension), api.download_raw(r["id"])):
+            print(format_row(r) + extension + " [{}]".format(out_dir))
 
         if self.include_mp4:
             if iter_to_file(fullpath.with_suffix(".mp4"), api.download(r["id"])):
@@ -199,7 +201,7 @@ class CPTVDownloader:
                 json.dump(r, open(meta_file, "w"), indent=4)
 
     def _delete_existing(self, file_base, new_dir):
-        for path in self.file_list.get(file_base + ".cptv", []):
+        for path in self.file_list.get(file_base, []):
             path = Path(path)
             if str(path) != str(new_dir) and path.name not in SPECIAL_DIRS:
                 print(
