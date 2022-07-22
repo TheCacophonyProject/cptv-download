@@ -299,7 +299,7 @@ def main():
     downloader.out_folder = args.out_folder
     downloader.user = args.user
     downloader.password = args.password
-
+    downloader.ignore_tags = args.ignore
     if args.start_date:
         downloader.start_date = parse(args.start_date)
 
