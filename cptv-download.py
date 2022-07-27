@@ -86,6 +86,7 @@ class CPTVDownloader:
                 endDate=self.end_date,
                 tagmode=self.tag_mode,
                 tags=self.only_tags,
+                type_="thermalRaw",
                 offset=offset,
             )
             if len(rows) == 0:
@@ -300,6 +301,7 @@ def main():
     downloader.user = args.user
     downloader.password = args.password
     downloader.ignore_tags = args.ignore
+
     if args.start_date:
         downloader.start_date = parse(args.start_date)
 
