@@ -21,6 +21,7 @@ OLD_TRACKER = parse("2021-06-01 17:02:30.592 +1200")
 
 class CPTVDownloader:
     def __init__(self):
+        self.type = None
         self.recording_tags = None
         self.start_date = None
         self.end_date = None
@@ -87,6 +88,7 @@ class CPTVDownloader:
                 tagmode=self.tag_mode,
                 tags=self.only_tags,
                 offset=offset,
+                type_=self.type,
             )
             if len(rows) == 0:
                 break
@@ -161,7 +163,7 @@ class CPTVDownloader:
 
         file_base = str(r["id"]) + "-" + dtstring + "-" + r["deviceName"]
         r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
-        
+
         tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
             print('No valid out directory for file "%s"' % file_base)
@@ -297,7 +299,7 @@ def main():
     downloader.out_folder = args.out_folder
     downloader.user = args.user
     downloader.password = args.password
-
+    downloader.type = args.type
     if args.start_date:
         downloader.start_date = parse(args.start_date)
 
@@ -351,6 +353,10 @@ def parse_args():
     parser.add_argument(
         '--end-date',
         help='If specified, only files recorded before or on this date will be downloaded.')
+    parser.add_argument(
+        '--type',
+        default = 'thermalRaw',
+        help='Type of filed to download defaults to thermalRaw')
     parser.add_argument(
         '-r', '--recent',
         type=int,
