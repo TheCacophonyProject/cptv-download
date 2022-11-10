@@ -151,7 +151,16 @@ class CPTVDownloader:
     def _download(self, r, api, out_base):
         dtstring = ""
         rawMime = r.get("rawMimeType", "application/x-cptv")
-        extension = ".cptv" if rawMime == "application/x-cptv" else ".mp4"
+        print("raw mime is", rawMime)
+        if rawMime == "application/x-cptv":
+            extensinon = ".cptv"
+        elif rawMime == "audio/mp4":
+            extension = ".m4a"
+        elif rawMime == "video/mp4":
+            extension = ".mp4"
+        else:
+            print("Unknown mime type", rawMime, " for ", r.get("id"))
+            return
         tracker_version = 10
         if "recordingDateTime" in r:
             try:
