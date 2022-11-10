@@ -21,6 +21,7 @@ OLD_TRACKER = parse("2021-06-01 17:02:30.592 +1200")
 
 class CPTVDownloader:
     def __init__(self):
+        self.type = None
         self.recording_tags = None
         self.start_date = None
         self.end_date = None
@@ -86,8 +87,8 @@ class CPTVDownloader:
                 endDate=self.end_date,
                 tagmode=self.tag_mode,
                 tags=self.only_tags,
-                type_="thermalRaw",
                 offset=offset,
+                type_=self.type,
             )
             if len(rows) == 0:
                 break
@@ -301,7 +302,7 @@ def main():
     downloader.user = args.user
     downloader.password = args.password
     downloader.ignore_tags = args.ignore
-
+    downloader.type = args.type
     if args.start_date:
         downloader.start_date = parse(args.start_date)
 
@@ -355,6 +356,10 @@ def parse_args():
     parser.add_argument(
         '--end-date',
         help='If specified, only files recorded before or on this date will be downloaded.')
+    parser.add_argument(
+        '--type',
+        default = 'thermalRaw',
+        help='Type of filed to download defaults to thermalRaw')
     parser.add_argument(
         '-r', '--recent',
         type=int,

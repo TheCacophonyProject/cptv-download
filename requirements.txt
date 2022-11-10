@@ -3,4 +3,4 @@ pytest
 python-dateutil
 requests-toolbelt
 cptv
-cacophonyapi
+cacophonyapi~=0.0.2
