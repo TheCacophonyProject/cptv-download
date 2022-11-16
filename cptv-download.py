@@ -151,9 +151,8 @@ class CPTVDownloader:
     def _download(self, r, api, out_base):
         dtstring = ""
         rawMime = r.get("rawMimeType", "application/x-cptv")
-        print("raw mime is", rawMime)
         if rawMime == "application/x-cptv":
-            extensinon = ".cptv"
+            extension = ".cptv"
         elif rawMime == "audio/mp4":
             extension = ".m4a"
         elif rawMime == "video/mp4":
@@ -181,7 +180,6 @@ class CPTVDownloader:
             return
 
         out_dir = out_base / out_dir
-
         if tags_desc in self.ignore_tags:
             print('Ignored file "%s" - tag "%s" ignored' % (file_base, tags_desc))
             self.ignored += 1
