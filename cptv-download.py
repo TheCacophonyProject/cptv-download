@@ -153,7 +153,7 @@ class CPTVDownloader:
         rawMime = r.get("rawMimeType", "application/x-cptv")
         if rawMime == "application/x-cptv":
             extension = ".cptv"
-        elif rawMime == "audio/mp4":
+        elif rawMime in ["audio/wav", "audio/mp4"]:
             extension = ".m4a"
         elif rawMime == "video/mp4":
             extension = ".mp4"
