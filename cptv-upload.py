@@ -7,12 +7,12 @@ from cacophonyapi.user import UserAPI as API
 from pathlib import Path
 
 
-def upload_recording(api, file, args):
-    print("uploading", file)
+def upload_recording(api, file_name, args):
+    print("uploading", file_name)
     if file.suffix == ".cptv":
-        api.upload_recording(args.groupname, args.devicename, args.filename)
+        api.upload_recording(args.groupname, args.devicename, file_name)
     elif file.suffix in [".m4a", ".mp3", ".wav"]:
-        meta_f = file.with_suffix(".txt")
+        meta_f = file_name.with_suffix(".txt")
         if not meta_f.exists():
             print("Require audio meta data to get rec data time")
         else:
@@ -21,9 +21,7 @@ def upload_recording(api, file, args):
             rec_date = meta["recordingDateTime"]
         props = {"type": "audio", "recordingDateTime": rec_date}
         print("props", props)
-        api.upload_recording(
-            args.groupname, args.devicename, args.filename, props=props
-        )
+        api.upload_recording(args.groupname, args.devicename, file_name, props=props)
 
 
 def main():
@@ -45,8 +43,9 @@ def main():
     api = API(args.server_url, args.username, args.password)
     base_dir = Path(args.filename)
     if base_dir.is_dir():
-        for file in base_dir.iterdir():
-            upload_recording(api, file, args)
+        for file_name in base_dir.rglob("*"):
+            if file_name.is_file():
+                upload_recording(api, file_name, args)
             # if file.suffix == ".cptv":
             #     filepath = os.path.join(args.filename, file)
             #     api.upload_recording(args.groupname, args.devicename, filepath)
