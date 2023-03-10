@@ -6,7 +6,7 @@ language: python
 install:
   - git clone "https://github.com/TheCacophonyProject/cacophony-web"
   - cd cacophony-web
-  - sed -i "25iRUN npm install typescript" Dockerfile
+  - sed -i "25iRUN cd api && npm install typescript" Dockerfile
   - cd api
   - docker-compose build && docker-compose up --force-recreate
   - cd ../..
