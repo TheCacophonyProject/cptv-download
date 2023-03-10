@@ -6,8 +6,9 @@ language: python
 install:
   - git clone "https://github.com/TheCacophonyProject/cacophony-web"
   - cd cacophony-web
-  - sed -i "25iRUN cd api && npm install typescript -g" Dockerfile
-  - cd api
+  - cd api && npm install
+  - cd ../types && npm install
+  - cd ..
   - docker-compose build && docker-compose up --force-recreate
   - cd ../..
   - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
