@@ -9,7 +9,7 @@ install:
   - cd api && npm install
   - cd ../types && npm install
   - cd ..
-  - docker-compose build && docker-compose up --force-recreate
+  - docker-compose build && docker-compose up --force-recreate -d
   - cd ../..
   - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
   - pip install -r requirements.txt
