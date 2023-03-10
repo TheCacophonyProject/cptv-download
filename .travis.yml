@@ -6,7 +6,7 @@ language: python
 install:
   - git clone "https://github.com/TheCacophonyProject/cacophony-web"
   - cd cacophony-web/api
-  - docker-compose build && docker-compose up --force-recreate -d
+  - docker-compose build && docker-compose up --force-recreate
   - cd ../..
   - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
   - pip install -r requirements.txt
