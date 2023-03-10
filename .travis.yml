@@ -8,7 +8,7 @@ install:
   - cd cacophony-web
   - cd api && npm install
   - cd ../types && npm install
-  - cd ..
+  - cd ../api
   - docker-compose build && docker-compose up --force-recreate -d
   - cd ../..
   - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
