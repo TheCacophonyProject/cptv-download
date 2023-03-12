@@ -116,7 +116,6 @@ class CPTVDownloader:
     def _downloader(self, q, api, out_base):
         """Worker to handle downloading of files."""
         while True:
-
             r = q.get()
             if r is None:
                 print(
@@ -153,7 +152,9 @@ class CPTVDownloader:
         rawMime = r.get("rawMimeType", "application/x-cptv")
         if rawMime == "application/x-cptv":
             extension = ".cptv"
-        elif rawMime in ["audio/wav", "audio/mp4"]:
+        elif rawMime == "audio/wav":
+            extension = ".wav"
+        elif rawMime == "audio/mp4":
             extension = ".m4a"
         elif rawMime == "video/mp4":
             extension = ".mp4"
@@ -300,7 +301,6 @@ def iter_to_file(filename, source, overwrite=False):
 
 
 def main():
-
     args = parse_args()
     downloader = CPTVDownloader()
     downloader.recording_tags = args.recording_tags
