@@ -4,14 +4,17 @@ services:
 language: python
 
 install:
-  - git clone "https://github.com/TheCacophonyProject/cacophony-api"
-  - cd cacophony-api
+  - git clone "https://github.com/TheCacophonyProject/cacophony-web"
+  - cd cacophony-web
+  - cd api && npm install
+  - cd ../types && npm install
+  - cd ../api
   - docker-compose build && docker-compose up --force-recreate -d
-  - cd ..
+  - cd ../..
   - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
   - pip install -r requirements.txt
 before_script:
-  - ./cacophony-api/wait-for-api || { docker ps; docker logs cacophony-api; exit 1; }
+  - node ./cacophony-web/api/waitForApi.js || { docker ps; docker-compose logs; travis_terminate 1; }
   - sudo docker exec cacophony-api sh -c "sudo -i -u postgres psql cacophonytest -f/db-seed.sql"
 
 script:

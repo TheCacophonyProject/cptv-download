@@ -21,6 +21,7 @@ OLD_TRACKER = parse("2021-06-01 17:02:30.592 +1200")
 
 class CPTVDownloader:
     def __init__(self):
+        self.type = None
         self.recording_tags = None
         self.start_date = None
         self.end_date = None
@@ -87,6 +88,7 @@ class CPTVDownloader:
                 tagmode=self.tag_mode,
                 tags=self.only_tags,
                 offset=offset,
+                type_=self.type,
             )
             if len(rows) == 0:
                 break
@@ -114,7 +116,6 @@ class CPTVDownloader:
     def _downloader(self, q, api, out_base):
         """Worker to handle downloading of files."""
         while True:
-
             r = q.get()
             if r is None:
                 print(
@@ -148,6 +149,18 @@ class CPTVDownloader:
 
     def _download(self, r, api, out_base):
         dtstring = ""
+        rawMime = r.get("rawMimeType", "application/x-cptv")
+        if rawMime == "application/x-cptv":
+            extension = ".cptv"
+        elif rawMime == "audio/wav":
+            extension = ".wav"
+        elif rawMime == "audio/mp4":
+            extension = ".m4a"
+        elif rawMime == "video/mp4":
+            extension = ".mp4"
+        else:
+            print("Unknown mime type", rawMime, " for ", r.get("id"))
+            return
         tracker_version = 10
         if "recordingDateTime" in r:
             try:
@@ -161,14 +174,13 @@ class CPTVDownloader:
 
         file_base = str(r["id"]) + "-" + dtstring + "-" + r["deviceName"]
         r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
-        
+
         tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
             print('No valid out directory for file "%s"' % file_base)
             return
 
         out_dir = out_base / out_dir
-
         if tags_desc in self.ignore_tags:
             print('Ignored file "%s" - tag "%s" ignored' % (file_base, tags_desc))
             self.ignored += 1
@@ -180,12 +192,12 @@ class CPTVDownloader:
             return
         fullpath = out_dir / file_base
         if self.auto_delete:
-            self._delete_existing(file_base, out_dir)
+            self._delete_existing(file_base.with_suffix(extension), out_dir)
 
         os.makedirs(out_dir, exist_ok=True)
         print("Processing ", file_base)
-        if iter_to_file(fullpath.with_suffix(".cptv"), api.download_raw(r["id"])):
-            print(format_row(r) + ".cptv" + " [{}]".format(out_dir))
+        if iter_to_file(fullpath.with_suffix(extension), api.download_raw(r["id"])):
+            print(format_row(r) + extension + " [{}]".format(out_dir))
 
         if self.include_mp4:
             if iter_to_file(fullpath.with_suffix(".mp4"), api.download(r["id"])):
@@ -199,7 +211,7 @@ class CPTVDownloader:
                 json.dump(r, open(meta_file, "w"), indent=4)
 
     def _delete_existing(self, file_base, new_dir):
-        for path in self.file_list.get(file_base + ".cptv", []):
+        for path in self.file_list.get(file_base, []):
             path = Path(path)
             if str(path) != str(new_dir) and path.name not in SPECIAL_DIRS:
                 print(
@@ -289,7 +301,6 @@ def iter_to_file(filename, source, overwrite=False):
 
 
 def main():
-
     args = parse_args()
     downloader = CPTVDownloader()
     downloader.recording_tags = args.recording_tags
@@ -297,7 +308,8 @@ def main():
     downloader.out_folder = args.out_folder
     downloader.user = args.user
     downloader.password = args.password
-
+    downloader.ignore_tags = args.ignore
+    downloader.type = args.type
     if args.start_date:
         downloader.start_date = parse(args.start_date)
 
@@ -351,6 +363,10 @@ def parse_args():
     parser.add_argument(
         '--end-date',
         help='If specified, only files recorded before or on this date will be downloaded.')
+    parser.add_argument(
+        '--type',
+        default = 'thermalRaw',
+        help='Type of filed to download defaults to thermalRaw')
     parser.add_argument(
         '-r', '--recent',
         type=int,
