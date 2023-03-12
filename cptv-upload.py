@@ -20,7 +20,6 @@ def upload_recording(api, file_name, args):
                 meta = json.load(f)
             rec_date = meta["recordingDateTime"]
         props = {"type": "audio", "recordingDateTime": rec_date}
-        print("props", props)
         api.upload_recording(
             args.groupname, args.devicename, str(file_name), props=props
         )
@@ -41,20 +40,12 @@ def main():
     )
 
     args = parser.parse_args()
-    print(args.server_url, args.username, args.password)
     api = API(args.server_url, args.username, args.password)
     base_dir = Path(args.filename)
     if base_dir.is_dir():
         for file_name in base_dir.rglob("*"):
             if file_name.is_file():
                 upload_recording(api, file_name, args)
-            # if file.suffix == ".cptv":
-            #     filepath = os.path.join(args.filename, file)
-            #     api.upload_recording(args.groupname, args.devicename, filepath)
-            # elif file.suffix in [".m4a", ".mp3", ".wav"]:
-            #     Path(args.filename)
-            #     filepath = os.path.join(args.filename, file)
-            #     api.upload_recording(args.groupname, args.devicename, filepath)
     else:
         upload_recording(api, base_dir, args)
 
