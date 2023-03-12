@@ -9,9 +9,9 @@ from pathlib import Path
 
 def upload_recording(api, file_name, args):
     print("uploading", file_name)
-    if file.suffix == ".cptv":
+    if file_name.suffix == ".cptv":
         api.upload_recording(args.groupname, args.devicename, file_name)
-    elif file.suffix in [".m4a", ".mp3", ".wav"]:
+    elif file_name.suffix in [".m4a", ".mp3", ".wav"]:
         meta_f = file_name.with_suffix(".txt")
         if not meta_f.exists():
             print("Require audio meta data to get rec data time")
