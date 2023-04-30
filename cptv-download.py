@@ -154,6 +154,8 @@ class CPTVDownloader:
             extension = ".cptv"
         elif rawMime == "audio/wav":
             extension = ".wav"
+        elif rawMime == "audio/mpeg":
+            extension = ".mp3"
         elif rawMime == "audio/mp4":
             extension = ".m4a"
         elif rawMime == "video/mp4":
