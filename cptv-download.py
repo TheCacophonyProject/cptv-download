@@ -406,7 +406,7 @@ def parse_args():
     parser.add_argument('-m', '--tagmode',
         dest='tag_mode',
         default='human-tagged',
-        help='Select videos by only a particular tag mode.  Default is only selects videos tagged by both humans and automatic')
+        help='Select videos by only a particular tag mode.  Default is only selects videos tagged by humans')
     parser.add_argument('-id',
         dest='recording_id',
         default=None,
