@@ -80,27 +80,39 @@ class CPTVDownloader:
         if len(self.only_tags) == 0:
             self.only_tags = None
         remaining = self.limit
-        while self.limit is None or offset < self.limit:
-            rows = api.query(
-                limit=remaining,
-                startDate=self.start_date,
-                endDate=self.end_date,
-                tagmode=self.tag_mode,
-                tags=self.only_tags,
-                offset=offset,
-                type_=self.type,
-            )
-            if len(rows) == 0:
+        if self.start_date is None:
+            self.start_date = datetime.datetime(2017, 1, 1)
+        end_date = self.end_date
+        if self.end_date is None:
+            end_date = datetime.datetime.now()
+        while self.start_date < end_date:
+            self.end_date = self.start_date + datetime.timedelta(days=50)
+            print("running ", self.start_date, " - ", self.end_date, self.limit)
+            while self.limit is None or offset < self.limit:
+                rows = api.query(
+                    limit=remaining,
+                    startDate=self.start_date,
+                    endDate=self.end_date,
+                    tagmode=self.tag_mode,
+                    tags=self.only_tags,
+                    offset=offset,
+                    type_=self.type,
+                )
+                if len(rows) == 0:
+                    break
+                offset += len(rows)
+                if remaining:
+                    remaining -= len(rows)
+
+                if self.auto_delete:
+                    self.update_file_locations()
+
+                for row in rows:
+                    pool.put(row)
+            self.start_date = self.end_date
+            offset = 0
+            if self.limit and remaining <= 0:
                 break
-            offset += len(rows)
-            if remaining:
-                remaining -= len(rows)
-
-            if self.auto_delete:
-                self.update_file_locations()
-
-            for row in rows:
-                pool.put(row)
         pool.stop()
 
     def update_file_locations(self):
