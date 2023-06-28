@@ -4,9 +4,11 @@ from pathlib import Path
 import argparse
 import datetime
 import json
+import time
 import os
+import sys
 import random
-
+import logging
 from dateutil.parser import parse
 
 from cacophonyapi.user import UserAPI as API
@@ -17,6 +19,20 @@ SPECIAL_DIRS = ["test", "hard"]
 
 # anything before this is tracker version 9
 OLD_TRACKER = parse("2021-06-01 17:02:30.592 +1200")
+
+
+def init_logging(timestamps=True):
+    """Set up logging for use by various classifier pipeline scripts.
+
+    Logs will go to stderr.
+    """
+
+    fmt = "%(levelname)7s %(message)s"
+    if timestamps:
+        fmt = "%(asctime)s " + fmt
+    logging.basicConfig(
+        stream=sys.stderr, level=logging.INFO, format=fmt, datefmt="%Y-%m-%d %H:%M:%S"
+    )
 
 
 class CPTVDownloader:
@@ -53,10 +69,6 @@ class CPTVDownloader:
         self.not_selected = 0
         self.processed = 0
 
-    def log(self, message):
-        if self.verbose:
-            print(message)
-
     def process(self, url):
         """Downloads all requested files from specified server"""
         self.ignored = 0
@@ -87,18 +99,38 @@ class CPTVDownloader:
         if self.end_date is None:
             end_date = datetime.datetime.now()
         while self.start_date < end_date:
-            self.end_date = self.start_date + datetime.timedelta(days=50)
-            print("running ", self.start_date, " - ", self.end_date, self.limit)
+            self.end_date = self.start_date + datetime.timedelta(days=2)
+            logging.info(
+                "running %s-%s with limit %s",
+                self.start_date,
+                self.end_date,
+                self.limit,
+            )
             while self.limit is None or offset < self.limit:
-                rows = api.query(
-                    limit=remaining,
-                    startDate=self.start_date,
-                    endDate=self.end_date,
-                    tagmode=self.tag_mode,
-                    tags=self.only_tags,
-                    offset=offset,
-                    type_=self.type,
-                )
+                rows = None
+                for i in range(3):
+                    try:
+                        rows = api.query(
+                            limit=remaining,
+                            startDate=self.start_date,
+                            endDate=self.end_date,
+                            tagmode=self.tag_mode,
+                            tags=self.only_tags,
+                            offset=offset,
+                            type_=self.type,
+                        )
+                        break
+                    except:
+                        logging.error(
+                            "Could not get query failed %s times", i, exc_info=True
+                        )
+                        if i < 3:
+                            time.sleep(10)
+                if rows is None:
+                    logging.error("Query failed stopping")
+                    pool.stop()
+                    raise Exception("API Query failed")
+
                 if len(rows) == 0:
                     break
                 offset += len(rows)
@@ -110,6 +142,7 @@ class CPTVDownloader:
 
                 for row in rows:
                     pool.put(row)
+                logging.info("Added %s recordings to pool", len(rows))
                 pool.wait()
             self.start_date = self.end_date
             offset = 0
@@ -132,15 +165,18 @@ class CPTVDownloader:
         while True:
             r = q.get()
             if r is None:
-                print(
-                    "Worker processed %d and skipped %d files"
-                    % (self.processed, self.ignored + self.not_selected)
+                logging.info(
+                    "Worker processed %s and skipped %s files",
+                    self.processed,
+                    self.ignored + self.not_selected,
                 )
                 break
 
             try:
-                self._download(r, api, out_base)
+                downloaded = self._download(r, api, out_base)
                 self.processed += 1
+            except:
+                logging.error("Error downloading rec %s", r["id"], exc_info=True)
             finally:
                 q.task_done()
 
@@ -175,7 +211,7 @@ class CPTVDownloader:
         elif rawMime == "video/mp4":
             extension = ".mp4"
         else:
-            print("Unknown mime type", rawMime, " for ", r.get("id"))
+            logging.info("Unknown mime type %s for %s", rawMime, r.get("id"))
             return
         tracker_version = 10
         if "recordingDateTime" in r:
@@ -193,16 +229,19 @@ class CPTVDownloader:
 
         tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
-            print('No valid out directory for file "%s"' % file_base)
+            logging.info('No valid out directory for file "%s"', file_base)
             return
 
         out_dir = out_base / out_dir
         if tags_desc in self.ignore_tags:
-            print('Ignored file "%s" - tag "%s" ignored' % (file_base, tags_desc))
+            logging.info('Ignored file "%s" - tag "%s" ignored', file_base, tags_desc)
             self.ignored += 1
+            return
 
         if self.only_tags and tags_desc not in self.only_tags:
-            print(f'Ignored file "{file_base}" - tag "{tags_desc}" is not selected')
+            logging.info(
+                f'Ignored file "{file_base}" - tag "{tags_desc}" is not selected'
+            )
             self.not_selected += 1
             return
         fullpath = out_dir / file_base
@@ -210,13 +249,17 @@ class CPTVDownloader:
             self._delete_existing(file_base.with_suffix(extension), out_dir)
 
         os.makedirs(out_dir, exist_ok=True)
-        print("Processing ", file_base)
-        if iter_to_file(fullpath.with_suffix(extension), api.download_raw(r["id"])):
-            print(format_row(r) + extension + " [{}]".format(out_dir))
+        out_file = fullpath.with_suffix(extension)
+        if not out_file.exists():
+            logging.info("Downloading %s", file_base)
+            if iter_to_file(out_file, api.download_raw(r["id"])):
+                logging.info("%s.%s [%s]", format_row(r), extension, out_dir)
 
         if self.include_mp4:
-            if iter_to_file(fullpath.with_suffix(".mp4"), api.download(r["id"])):
-                print(format_row(r) + ".mp4" + " [{}]".format(out_dir))
+            out_file = fullpath.with_suffix(".mp4")
+            if not out_file.exists():
+                if iter_to_file(out_file, api.download(r["id"])):
+                    logging.info("%s.mp4 [%s]", format_row(r), out_dir)
 
         if self.include_metadata:
             meta_file = fullpath.with_suffix(".txt")
@@ -229,10 +272,11 @@ class CPTVDownloader:
         for path in self.file_list.get(file_base, []):
             path = Path(path)
             if str(path) != str(new_dir) and path.name not in SPECIAL_DIRS:
-                print(
-                    "Found {} in '{}' but should be in '{}'".format(
-                        file_base, str(path), str(new_dir)
-                    )
+                logging.info(
+                    "Found %s in '%s' but should be in '%s'",
+                    file_base,
+                    str(path),
+                    str(new_dir),
                 )
                 for ext in ["cptv", "dat", "mp4"]:
                     remove_file(str(path / (file_base + "." + ext)))
@@ -245,7 +289,7 @@ def remove_file(file):
     except FileNotFoundError:
         pass
     except OSError as e:
-        print("Warning, could not remove file {}. Error: {}".format(file, e))
+        logging.warn("Warning, could not remove file %s. Error: %s", file, e)
 
 
 def get_distributed_folder(name, num_folders=256, seed=31):
@@ -317,6 +361,7 @@ def iter_to_file(filename, source, overwrite=False):
 
 def main():
     args = parse_args()
+    init_logging()
     downloader = CPTVDownloader()
     downloader.recording_tags = args.recording_tags
     downloader.recording_id = args.recording_id
@@ -332,9 +377,9 @@ def main():
         downloader.end_date = parse(args.end_date)
 
     if args.recording_id:
-        print("Downloading Recording - {}".format(downloader.recording_id))
+        logging.info("Downloading Recording - %s", downloader.recording_id)
     elif args.recent:
-        print("Downloading new clips from the past {} days.".format(args.recent))
+        logging.info("Downloading new clips from the past %s days.", args.recent)
         downloader.start_date = datetime.datetime.now() - datetime.timedelta(
             days=args.recent
         )
@@ -349,7 +394,7 @@ def main():
     downloader.tag_mode = args.tag_mode
 
     if downloader.auto_delete:
-        print("Auto delete enabled.")
+        logging.info("Auto delete enabled.")
 
     server_list = []
     if args.server:
