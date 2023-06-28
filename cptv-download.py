@@ -75,6 +75,7 @@ class CPTVDownloader:
         print("Dates are {0} - {1}".format(self.start_date, self.end_date))
         print("Required tags are {0}".format(self.only_tags))
         print("Ignore tags are {0}".format(self.ignore_tags))
+
         pool = Pool(self.workers, self._downloader, api, Path(self.out_folder))
         offset = 0
         if len(self.only_tags) == 0:
@@ -109,6 +110,7 @@ class CPTVDownloader:
 
                 for row in rows:
                     pool.put(row)
+                pool.wait()
             self.start_date = self.end_date
             offset = 0
             if self.limit and remaining <= 0:
@@ -198,7 +200,6 @@ class CPTVDownloader:
         if tags_desc in self.ignore_tags:
             print('Ignored file "%s" - tag "%s" ignored' % (file_base, tags_desc))
             self.ignored += 1
-            return
 
         if self.only_tags and tags_desc not in self.only_tags:
             print(f'Ignored file "{file_base}" - tag "{tags_desc}" is not selected')

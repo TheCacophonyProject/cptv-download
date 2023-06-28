@@ -26,3 +26,6 @@ class Pool:
             self._q.put(None)
         for t in self._threads:
             t.join()
+
+    def wait(sef):
+        self._q.join()
