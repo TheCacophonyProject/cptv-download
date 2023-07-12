@@ -5,6 +5,7 @@ import json
 from cacophonyapi.user import UserAPI as API
 
 from pathlib import Path
+import datetime
 
 
 def upload_recording(api, file_name, args):
@@ -15,11 +16,18 @@ def upload_recording(api, file_name, args):
         meta_f = file_name.with_suffix(".txt")
         if not meta_f.exists():
             print("Require audio meta data to get rec data time")
+            rec_date = file_name.name[:10]
+            rec_date = datetime.datetime.strptime(rec_date, "%Y-%m-%d")
+            rec_date = rec_date.isoformat()
         else:
             with open(meta_f, "r") as f:
                 meta = json.load(f)
             rec_date = meta["recordingDateTime"]
-        props = {"type": "audio", "recordingDateTime": rec_date}
+        props = {
+            "type": "audio",
+            "recordingDateTime": rec_date,
+            "additionalMetadata": {"file": file_name.name},
+        }
         api.upload_recording(
             args.groupname, args.devicename, str(file_name), props=props
         )
