@@ -208,7 +208,7 @@ class CPTVDownloader:
             extension = ".mp3"
         elif rawMime == "audio/mp4":
             extension = ".m4a"
-        elif rawMime == "video/mp4":
+        elif rawMime in ["video/mp4", "application/octet-stream"]:
             extension = ".mp4"
         else:
             logging.info("Unknown mime type %s for %s", rawMime, r.get("id"))
@@ -226,7 +226,6 @@ class CPTVDownloader:
 
         file_base = str(r["id"]) + "-" + dtstring + "-" + r["deviceName"]
         r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
-
         tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
             logging.info('No valid out directory for file "%s"', file_base)
