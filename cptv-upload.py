@@ -11,7 +11,20 @@ import datetime
 def upload_recording(api, file_name, args):
     print("uploading", file_name)
     if file_name.suffix == ".cptv":
-        api.upload_recording(args.groupname, args.devicename, str(file_name))
+        file_name = Path(file_name)
+        try:
+            rec_date = datetime.datetime.strptime(file_name.stem, "%Y%m%d-%H%M%S")
+        except Exception as ex:
+            print("Coult not parse date ", file_name.stem, ex)
+            rec_date = None
+        props = {
+            "type": "thermal",
+        }
+        if rec_date is not None:
+            props["recordingDateTime"] = rec_date.isoformat()
+        api.upload_recording(
+            args.groupname, args.devicename, str(file_name), props=props
+        )
     elif file_name.suffix in [".m4a", ".mp3", ".wav"]:
         meta_f = file_name.with_suffix(".txt")
         if not meta_f.exists():
