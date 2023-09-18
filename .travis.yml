@@ -15,7 +15,8 @@ install:
   - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
   - pip install -r requirements.txt
 before_script:
-  - node ./cacophony-web/api/waitForApi.js || { docker ps; docker-compose logs; travis_terminate 1; }
+  - docker-compose logs
+  # - node ./cacophony-web/api/waitForApi.js || { docker ps; docker-compose logs; travis_terminate 1; }
   - docker exec cacophony-api sh -c "sudo -i -u postgres psql cacophonytest -f/db-seed.sql"
 
 script:
