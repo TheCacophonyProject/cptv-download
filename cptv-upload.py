@@ -18,7 +18,7 @@ def upload_recording(api, file_name, args):
             print("Coult not parse date ", file_name.stem, ex)
             rec_date = None
         props = {
-            "type": "thermal",
+            "type": "thermalRaw",
         }
         if rec_date is not None:
             props["recordingDateTime"] = rec_date.isoformat()
