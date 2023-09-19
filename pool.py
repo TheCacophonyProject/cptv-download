@@ -1,5 +1,6 @@
 import queue
 import threading
+import logging
 
 
 class Pool:
@@ -20,9 +21,12 @@ class Pool:
         self._q.put(item)
 
     def stop(self):
-        self._q.join()
-
+        self.wait()
         for _ in self._threads:
             self._q.put(None)
         for t in self._threads:
             t.join()
+
+    def wait(self):
+        logging.info("Waiting for jobs to finish %s", self._q.qsize())
+        self._q.join()

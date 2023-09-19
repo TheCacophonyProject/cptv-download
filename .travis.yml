@@ -1,6 +1,8 @@
 services:
     - docker
 
+dist: focal
+
 language: python
 
 install:
@@ -10,12 +12,16 @@ install:
   - cd ../types && npm install
   - cd ../api
   - docker-compose build && docker-compose up --force-recreate -d
+  - docker ps
   - cd ../..
   - docker cp db-test-seed.sql cacophony-api:/db-seed.sql
   - pip install -r requirements.txt
 before_script:
-  - node ./cacophony-web/api/waitForApi.js || { docker ps; docker-compose logs; travis_terminate 1; }
-  - sudo docker exec cacophony-api sh -c "sudo -i -u postgres psql cacophonytest -f/db-seed.sql"
+  # - docker-compose logs
+  - cd cacophony-web/api
+  - node ./waitForApi.js || { docker ps; docker-compose logs; travis_terminate 1; }
+  - cd ../..
+  - docker exec cacophony-api sh -c "sudo -i -u postgres psql cacophonytest -f/db-seed.sql"
 
 script:
     - cd tests
