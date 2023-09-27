@@ -262,6 +262,7 @@ class CPTVDownloader:
 
         if self.include_metadata:
             meta_file = fullpath.with_suffix(".txt")
+            r["server"] = api._baseurl
             r["tracker_version"] = tracker_version
             r["additionalMetadata"] = ""
             if not os.path.exists(meta_file):
