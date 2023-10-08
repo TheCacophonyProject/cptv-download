@@ -439,7 +439,6 @@ def parse_args():
     parser.add_argument(
         '-i', '--ignore',
         action='append',
-        default=['untagged', 'part', 'untagged-by-humans' ,'unknown','unidentified'],
         help='Tag to ignore - can use multiple times')
     parser.add_argument(
         '-v', '--verbose',
@@ -476,6 +475,14 @@ def parse_args():
     # yapf: enable
 
     args = parser.parse_args()
+    if args.ignore is None:
+        args.ignore = [
+            "untagged",
+            "part",
+            "untagged-by-humans",
+            "unknown",
+            "unidentified",
+        ]
     return args
 
 
