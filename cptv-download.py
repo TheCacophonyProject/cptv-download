@@ -58,7 +58,7 @@ class CPTVDownloader:
         self.out_folder = None
 
         self.workers = 4
-
+        self.overwrite_meta = True
         self.include_metadata = True
         self.include_mp4 = False
 
@@ -195,7 +195,7 @@ class CPTVDownloader:
         else:
             out_dir = get_distributed_folder(filebase_name)
 
-        return description, out_dir
+        return tags, description, out_dir
 
     def _download(self, r, api, out_base):
         dtstring = ""
@@ -226,7 +226,7 @@ class CPTVDownloader:
 
         file_base = str(r["id"]) + "-" + dtstring + "-" + r["deviceName"]
         r["Tracks"] = api.get_tracks(r["id"]).get("tracks")
-        tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
+        tags, tags_desc, out_dir = self._get_tags_descriptor_and_out_dir(r, file_base)
         if out_dir is None:
             logging.info('No valid out directory for file "%s"', file_base)
             return
@@ -237,10 +237,8 @@ class CPTVDownloader:
             self.ignored += 1
             return
 
-        if self.only_tags and tags_desc not in self.only_tags:
-            logging.info(
-                f'Ignored file "{file_base}" - tag "{tags_desc}" is not selected'
-            )
+        if self.only_tags and not any([tag for tag in self.only_tags if tag in tags]):
+            logging.info(f'Ignored file "{file_base}" - no matching tags for "{tags}')
             self.not_selected += 1
             return
         fullpath = out_dir / file_base
@@ -265,7 +263,7 @@ class CPTVDownloader:
             r["server"] = api._baseurl
             r["tracker_version"] = tracker_version
             r["additionalMetadata"] = ""
-            if not os.path.exists(meta_file):
+            if self.overwrite_meta or not os.path.exists(meta_file):
                 json.dump(r, open(meta_file, "w"), indent=4)
 
     def _delete_existing(self, file_base, new_dir):
@@ -363,6 +361,7 @@ def main():
     args = parse_args()
     init_logging()
     downloader = CPTVDownloader()
+    downloader.overwrite_meta = args.overwrite_meta
     downloader.recording_tags = args.recording_tags
     downloader.recording_id = args.recording_id
     downloader.out_folder = args.out_folder
@@ -404,6 +403,17 @@ def main():
         downloader.process(server)
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ("yes", "true", "t", "y", "1"):
+        return True
+    elif v.lower() in ("no", "false", "f", "n", "0"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError("Boolean value expected.")
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -440,6 +450,13 @@ def parse_args():
         '-i', '--ignore',
         action='append',
         help='Tag to ignore - can use multiple times')
+    parser.add_argument(
+        '-overwrite-meta',
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Overwrite existing metadata")
     parser.add_argument(
         '-v', '--verbose',
         action='store_true',
