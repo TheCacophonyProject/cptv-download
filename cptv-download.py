@@ -44,6 +44,7 @@ class CPTVDownloader:
         self.limit = None
         self.tag_mode = None
         self.recording_id = None
+        self.only_metadata = False
         # list of tags to ignore
         self.ignore_tags = []
 
@@ -246,11 +247,12 @@ class CPTVDownloader:
             self._delete_existing(file_base.with_suffix(extension), out_dir)
 
         os.makedirs(out_dir, exist_ok=True)
-        out_file = fullpath.with_suffix(extension)
-        if not out_file.exists():
-            logging.info("Downloading %s", file_base)
-            if iter_to_file(out_file, api.download_raw(r["id"])):
-                logging.info("%s.%s [%s]", format_row(r), extension, out_dir)
+        if not self.only_metadata:
+            out_file = fullpath.with_suffix(extension)
+            if not out_file.exists():
+                logging.info("Downloading %s", file_base)
+                if iter_to_file(out_file, api.download_raw(r["id"])):
+                    logging.info("%s.%s [%s]", format_row(r), extension, out_dir)
 
         if self.include_mp4:
             out_file = fullpath.with_suffix(".mp4")
@@ -369,6 +371,7 @@ def main():
     downloader.password = args.password
     downloader.ignore_tags = args.ignore
     downloader.type = args.type
+    downloader.only_metadata = args.only_metadata
     if args.start_date:
         downloader.start_date = parse(args.start_date)
 
@@ -490,7 +493,12 @@ def parse_args():
         dest='recording_tags',
         help='Download and save recordings based of recording tags (Instead of track based tags)')
     # yapf: enable
-
+    parser.add_argument(
+        "--only-metadata",
+        action="store_true",
+        default=False,
+        help="Only download metadata",
+    )
     args = parser.parse_args()
     if args.ignore is None:
         args.ignore = [
