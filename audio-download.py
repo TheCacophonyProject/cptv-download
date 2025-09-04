@@ -77,8 +77,6 @@ def main():
     args.out_folder = Path(args.out_folder)
     args.out_folder.mkdir(exist_ok=True)
 
-
-
     print("Querying recordings")
     api = API(args.server, args.user, args.password)
     if args.id is not None:
@@ -100,8 +98,7 @@ def main():
 
 
 def download(q, api, args):
-    """Worker to handle downloading of files.
-    """
+    """Worker to handle downloading of files."""
     while True:
         r = q.get()
         if r is None:
