@@ -1,0 +1,6 @@
+database: 'the-database-name'
+bucket: cacophony-archive
+s3_auth: # List of authentications
+    endpoint_url: '<endpoint_url>'
+    aws_access_key_id: '<access key>'
+    aws_secret_access_key: '<secret access key>'

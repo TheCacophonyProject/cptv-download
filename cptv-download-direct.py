@@ -17,7 +17,7 @@ import json
 from psycopg2.extras import RealDictCursor
 
 HOST_NAME = socket.gethostname()
-CONFIG_FILE = "./psql-download.yaml"
+CONFIG_FILE = "./config.yaml"
 DUMP_EXT = ".pgdump"
 
 
