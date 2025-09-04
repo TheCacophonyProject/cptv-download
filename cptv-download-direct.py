@@ -90,8 +90,24 @@ def main():
     cur.execute(query_sql)
     rec_rows = cur.fetchall()
 
+    recs = {}
     for rec_row in rec_rows:
 
+        if rec_row["id"] in recs:
+            tag = map_recording_tag(rec_row)
+            recs[rec_row["id"]].append(tag)
+            continue        
+
+        # save any recordings as we are now on new rec
+        for rec in recs.values():
+            out_file = download_dir / f"{rec["id"]}.txt"
+
+            print("Writing out to ",out_file)
+            with out_file.open("w") as f:
+                json.dump(rec,f, indent=4, cls=CustomJSONEncoder)
+            return
+
+        recs = {}
         track_q = tracks_sql.format(rec_row["id"])
         cur.execute(track_q)
         tracks_rows = cur.fetchall()
@@ -110,10 +126,7 @@ def main():
                 
         recording = map_recording(rec_row)
         rec_row["tracks"]= list(tracks.items())
-        out_file = download_dir / f"{recording["id"]}.txt"
-        with out_file.open("w") as f:
-            json.dump(recording,f, indent=4, cls=CustomJSONEncoder)
-        break
+        recs[recording["id"]] = recording
 
 def get_track_data(s3, bucket_name, track_id):
     obj = s3.Object(bucket_name, f"Track/{track_id}")
@@ -208,8 +221,8 @@ def map_recording(recording):
         "stationName": recording["Station.name"],
         "type": recording["type"],
     }
-    if recording["Tags"] is not None:
-        new_rec["tags"] = map_recording_tags(recording["tags"])
+    if recording["Tags.id"] is not None:
+        new_rec["tags"] = [map_recording_tag(recording)]
     if recording["fileHash"] is not None:
         new_rec["fileHash"]= recording["fileHash"]
   
@@ -224,33 +237,30 @@ def map_recording(recording):
 
     return new_rec
 
-def map_recording_tags(rec_tags):
-    tags = []
-    for rec_tag in rec_tags:
-        tag = {
-            "automatic": rec_tag["automatic"],
-            "confidence": rec_tag["confidence"],
-            "detail": rec_tag["detail"],
-            "id": rec_tag["id"],
-            "recordingId": rec_tag["recordingId"],
-            "version": rec_tag["version"],
-            "createdAt": rec_tag["createdAt"],
-            "comment": rec_tag["comment"],
-        }
-        if rec_tag["taggerId"] is not None :
-            tag["taggerId"] = rec_tag["taggerId"]
-            if rec_tag["tagger"] is not None :
-                tag["taggerName"] = rec_tag["tagger.userName"]
-            
+def map_recording_tag(rec_tag):
+    tag = {
+        "automatic": rec_tag["automatic"],
+        "confidence": rec_tag["confidence"],
+        "detail": rec_tag["detail"],
+        "id": rec_tag["id"],
+        "recordingId": rec_tag["recordingId"],
+        "version": rec_tag["version"],
+        "createdAt": rec_tag["createdAt"],
+        "comment": rec_tag["comment"],
+    }
+    if rec_tag["taggerId"] is not None :
+        tag["taggerId"] = rec_tag["taggerId"]
+        if rec_tag["tagger"] is not None :
+            tag["taggerName"] = rec_tag["tagger.userName"]
         
-        if rec_tag["startTime"]  is not None and rec_tag["startTime"] is not None:
-            tag["startTime"] = rec_tag["startTime"];
-        
-        if rec_tag["duration"] is not None and rec_tag["duration"] is not None:
-            tag["duration"] = rec_tag["duration"]
-        
-        tags.append(tag)
-    return tags
+    
+    if rec_tag["startTime"]  is not None and rec_tag["startTime"] is not None:
+        tag["startTime"] = rec_tag["startTime"];
+    
+    if rec_tag["duration"] is not None and rec_tag["duration"] is not None:
+        tag["duration"] = rec_tag["duration"]
+    
+    return tag
 
 
 
