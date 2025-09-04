@@ -4,8 +4,7 @@ select
 	"Track"."startSeconds",
 	"Track"."endSeconds",
 	"Track"."RecordingId",
-	"TrackTags"."id" as "Tra
-ckTags.id",
+	"TrackTags"."id" as "TrackTags.id",
 	"TrackTags"."what" as "TrackTags.what",
 	"TrackTags"."path" as "TrackTags.path",
 	"TrackTags"."automatic" as "TrackTags.automatic",

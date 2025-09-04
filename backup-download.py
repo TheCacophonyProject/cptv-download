@@ -12,14 +12,12 @@ from pathlib import Path
 import logging
 
 HOST_NAME = socket.gethostname()
-CONFIG_FILE = "./psql-download.yaml"
+CONFIG_FILE = "./config.yaml"
 DUMP_EXT = ".pgdump"
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-
-    parser.add_argument("bucket", help="s3 bucket name")
     parser.add_argument("out_folder", help="Root folder to place downloaded files in.")
     args = parser.parse_args()
     return args
@@ -52,10 +50,10 @@ def main():
 
     with open(CONFIG_FILE, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-
+    bucket_name = config["bucket"]
     s3_config = config["s3_auth"]
     s3 = boto3.resource("s3", **s3_config)
-    bucket = s3.Bucket(args.bucket)
+    bucket = s3.Bucket(bucket_name)
 
     latest_file = None
     latest_modified = None
