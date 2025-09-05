@@ -94,10 +94,13 @@ def main():
     for rec_row in rec_rows:
         print("Rec ",rec_row["id"])
         if rec_row["id"] in recs:
-            print("add to existing ", rec_row)
-            tag = map_recording_tag(rec_row)
-            print("Adding tag to ",rec_row["id"],tag)
-            recs[rec_row["id"]]["tags"].append(tag)
+            if rec_row["Tags.id"] is not None:
+                existing_rec = recs[rec_row["id"]]
+                if "tags" not in existing_rec:
+                    existing_rec["tags"] = []
+                tag = map_recording_tag(rec_row)
+                print("Adding tag to ",rec_row["id"],tag)
+                existing_rec["tags"].append(tag)
             continue        
 
         # save any recordings as we are now on new rec
@@ -107,7 +110,7 @@ def main():
             print("Writing out to ",out_file)
             with out_file.open("w") as f:
                 json.dump(rec,f, indent=4, cls=CustomJSONEncoder)
-            return
+        #    return
 
         recs = {}
         track_q = tracks_sql.format(rec_row["id"])
@@ -127,7 +130,7 @@ def main():
                 tracks[track_id] = mapped_track
                 
         recording = map_recording(rec_row)
-        rec_row["tracks"]= list(tracks.items())
+        recording["tracks"]= list(tracks.items())
         recs[recording["id"]] = recording
         print("Added ", recording)
 
@@ -239,7 +242,7 @@ def map_recording(recording):
     return new_rec
 
 def map_recording_tag(rec_tag):
-    print("rec tag is ",rec_tag)
+    print("Map rec tag ", rec_tag)
     tag = {
         "automatic": rec_tag["Tags.automatic"],
         "confidence": rec_tag["Tags.confidence"],
@@ -252,7 +255,7 @@ def map_recording_tag(rec_tag):
     }
     if rec_tag["Tags.taggerId"] is not None :
         tag["Tags.taggerId"] = rec_tag["Tags.taggerId"]
-        if rec_tag["Tags.tagger"] is not None :
+        if rec_tag.get("Tags.tagger.userName") is not None :
             tag["Tags.taggerName"] = rec_tag["Tags.tagger.userName"]
         
     
