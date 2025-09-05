@@ -85,17 +85,19 @@ def main():
     limit = 10
     offset = 0
     query_sql = taggedthermals_sql.format(start_date, end_date, limit, offset)
-
+    print(query_sql)
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cur.execute(query_sql)
     rec_rows = cur.fetchall()
 
     recs = {}
     for rec_row in rec_rows:
-
+        print("Rec ",rec_row["id"])
         if rec_row["id"] in recs:
+            print("add to existing ", rec_row)
             tag = map_recording_tag(rec_row)
-            recs[rec_row["id"]].append(tag)
+            print("Adding tag to ",rec_row["id"],tag)
+            recs[rec_row["id"]]["tags"].append(tag)
             continue        
 
         # save any recordings as we are now on new rec
@@ -127,6 +129,7 @@ def main():
         recording = map_recording(rec_row)
         rec_row["tracks"]= list(tracks.items())
         recs[recording["id"]] = recording
+        print("Added ", recording)
 
 def get_track_data(s3, bucket_name, track_id):
     obj = s3.Object(bucket_name, f"Track/{track_id}")
@@ -140,13 +143,11 @@ def get_track_data(s3, bucket_name, track_id):
     with gzip.GzipFile(fileobj=io.BytesIO(body.read())) as gz_file:
         unzipped_data_bytes = gz_file.read()
     data_s = json.loads(unzipped_data_bytes.decode("utf-8"))
-    print("data is ", data_s)
 
     return data_s
 
 
 def map_track_tag(track_tag):
-    print("Track tag is ",track_tag)
     track_tag_base = {
         "confidence": track_tag["TrackTags.confidence"],
         "id": track_tag["TrackTags.id"],
@@ -223,42 +224,43 @@ def map_recording(recording):
     }
     if recording["Tags.id"] is not None:
         new_rec["tags"] = [map_recording_tag(recording)]
-    if recording["fileHash"] is not None:
+    if recording.get("fileHash") is not None:
         new_rec["fileHash"]= recording["fileHash"]
   
-    if recording["rawMimeType"] is not None:
+    if recording.get("rawMimeType") is not None:
         new_rec["rawMimeType"]= recording["rawMimeType"]
 
-    if recording["StationId"] is not None:
+    if recording.get("StationId") is not None:
         new_rec["stationId"]= recording["StationId"]
 
-    if recording["additionalMetadata"] is not None:
+    if recording.get("additionalMetadata") is not None:
         new_rec["additionalMetadata"]= recording["additionalMetadata"]
 
     return new_rec
 
 def map_recording_tag(rec_tag):
+    print("rec tag is ",rec_tag)
     tag = {
-        "automatic": rec_tag["automatic"],
-        "confidence": rec_tag["confidence"],
-        "detail": rec_tag["detail"],
-        "id": rec_tag["id"],
-        "recordingId": rec_tag["recordingId"],
-        "version": rec_tag["version"],
-        "createdAt": rec_tag["createdAt"],
-        "comment": rec_tag["comment"],
+        "automatic": rec_tag["Tags.automatic"],
+        "confidence": rec_tag["Tags.confidence"],
+        "detail": rec_tag["Tags.detail"],
+        "id": rec_tag["Tags.id"],
+        "recordingId": rec_tag["id"],
+        "version": rec_tag["Tags.version"],
+        "createdAt": rec_tag["Tags.createdAt"],
+        "comment": rec_tag["Tags.comment"],
     }
-    if rec_tag["taggerId"] is not None :
-        tag["taggerId"] = rec_tag["taggerId"]
-        if rec_tag["tagger"] is not None :
-            tag["taggerName"] = rec_tag["tagger.userName"]
+    if rec_tag["Tags.taggerId"] is not None :
+        tag["Tags.taggerId"] = rec_tag["Tags.taggerId"]
+        if rec_tag["Tags.tagger"] is not None :
+            tag["Tags.taggerName"] = rec_tag["Tags.tagger.userName"]
         
     
-    if rec_tag["startTime"]  is not None and rec_tag["startTime"] is not None:
-        tag["startTime"] = rec_tag["startTime"];
+    if rec_tag["Tags.startTime"]  is not None and rec_tag["Tags.startTime"] is not None:
+        tag["Tags.startTime"] = rec_tag["Tags.startTime"];
     
-    if rec_tag["duration"] is not None and rec_tag["duration"] is not None:
-        tag["duration"] = rec_tag["duration"]
+    if rec_tag["Tags.duration"] is not None and rec_tag["Tags.duration"] is not None:
+        tag["Tags.duration"] = rec_tag["Tags.duration"]
     
     return tag
 
