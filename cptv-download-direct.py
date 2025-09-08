@@ -15,6 +15,8 @@ import gzip
 import io
 import json
 from psycopg2.extras import RealDictCursor
+from multiprocessing import Pool, Process, Queue
+import time
 
 HOST_NAME = socket.gethostname()
 CONFIG_FILE = "./config.yaml"
@@ -53,6 +55,9 @@ def connect_to_db():
     return None
 
 
+s3_archive_bucket = None
+
+
 def main():
     args = parse_args()
     download_dir = Path(args.out_folder)
@@ -76,7 +81,7 @@ def main():
     archive_bucket = s3_archive_config["bucket"]
     del s3_archive_config["bucket"]
     s3_archive = boto3.resource("s3", **s3_archive_config)
-
+    global s3_archive_bucket
     s3_archive_bucket = s3_archive.Bucket(archive_bucket)
     conn = connect_to_db()
     with open("tagged_recordings.sql", "r") as f:
@@ -91,6 +96,17 @@ def main():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     saved = 0
     recs = {}
+    s3_queue = Queue()
+    num_processes = 8
+    processes = []
+    for i in range(num_processes):
+        p = Process(
+            target=save_file_process,
+            args=(s3_queue),
+        )
+        processes.append(p)
+        p.start()
+
     while True:
         query_sql = taggedthermals_sql.format(start_date, limit, offset)
         cur.execute(query_sql)
@@ -110,7 +126,7 @@ def main():
 
             # save any recordings as we are now on new rec
             for rec in recs.values():
-                save_rec(s3_archive_bucket, rec, download_dir)
+                save_rec(s3_archive_bucket, rec, download_dir, s3_queue)
                 saved += 1
                 if saved % 100 == 0:
                     print("Saved ", saved)
@@ -134,13 +150,37 @@ def main():
             recording = map_recording(rec_row)
             recording["tracks"] = list(tracks.items())
             recs[recording["id"]] = recording
+
         offset += limit
     # save any recordings as we are now on new rec
     for rec in recs.values():
-        save_rec(s3_archive_bucket, rec, download_dir)
+        save_rec(s3_archive_bucket, rec, download_dir, s3_queue)
+
+    for i in range(len(processes)):
+        s3_queue.put(("DONE"))
+    for process in processes:
+        process.join()
 
 
-def save_rec(s3_bucket, rec, out_dir):
+def save_file_process(queue):
+    while True:
+        data = queue.get()
+        try:
+            if data == "DONE":
+                break
+            save_rec_file(data)
+        except:
+            logging.error("Could not save rec", exc_info=True)
+
+
+def save_rec_file(data):
+    filename, key = data
+    print("Downloading ", key)
+    with open(filename, "wb") as f:
+        s3_archive_bucket.download_fileobj(key, f)
+
+
+def save_rec(rec, out_dir, s3_queue):
     dtstring = rec["recordingDateTime"].strftime("%Y%m%d-%H%M%S")
     # match old cptv-download so dont redl files
     file_base = f'{rec["id"]}-{dtstring}-{rec["deviceName"]}.txt'
@@ -154,8 +194,7 @@ def save_rec(s3_bucket, rec, out_dir):
     cptv_file = out_file.with_suffix(".cptv")
     if cptv_file.exists():
         return
-    with cptv_file.open("wb") as f:
-        s3_bucket.download_fileobj(f'objectstore/prod/{rec["rawFileKey"]}', f)
+    s3_queue.append((str(cptv_file), f'objectstore/prod/{rec["rawFileKey"]}'))
 
 
 def get_track_data(s3, bucket_name, track_id):
@@ -316,4 +355,7 @@ class CustomJSONEncoder(json.JSONEncoder):
 
 
 if __name__ == "__main__":
+    start = time.time()
+
     main()
+    print("Took ", time.time() - start)
