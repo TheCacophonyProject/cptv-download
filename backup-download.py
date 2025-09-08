@@ -50,8 +50,9 @@ def main():
 
     with open(CONFIG_FILE, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-    bucket_name = config["bucket"]
-    s3_config = config["s3_auth"]
+    s3_config = config["s3_archive_auth"]
+    bucket_name = s3_config["bucket"]
+    del s3_config["bucket"]
     s3 = boto3.resource("s3", **s3_config)
     bucket = s3.Bucket(bucket_name)
 

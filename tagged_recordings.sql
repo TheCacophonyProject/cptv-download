@@ -46,8 +46,7 @@ from
 		"Recording"."DeviceId" = "Device"."id"
 	where
 		(("Recording"."type" = 'thermalRaw'
-			and ("Recording"."recordingDateTime" >= '{}'
-				and "Recording"."recordingDateTime" <= '{}')
+			and ("Recording"."recordingDateTime" >= '{}')
 			and "Recording"."deletedAt" is null)
 		and ((
 		select

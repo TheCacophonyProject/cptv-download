@@ -1,6 +1,14 @@
 database: 'the-database-name'
-bucket: cacophony-archive
-s3_auth: # List of authentications
+s3_archive_auth: # Archive s3 can be used for cptv files
     endpoint_url: '<endpoint_url>'
     aws_access_key_id: '<access key>'
     aws_secret_access_key: '<secret access key>'
+    bucket: "browse-objects-syd"
+
+
+
+s3_auth: # Live s3 needs to be used for track data
+    endpoint_url: '<endpoint_url>'
+    aws_access_key_id: '<access key>'
+    aws_secret_access_key: '<secret access key>'
+    bucket: objects

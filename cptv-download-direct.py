@@ -68,10 +68,16 @@ def main():
         config = yaml.load(f, Loader=yaml.FullLoader)
 
     s3_config = config["s3_auth"]
-    bucket_name = config["bucket"]
-
+    bucket_name = s3_config["bucket"]
+    del s3_config["bucket"]
     s3 = boto3.resource("s3", **s3_config)
 
+    s3_archive_config = config["s3_archive_auth"]
+    archive_bucket = s3_config["bucket"]
+    del s3_archive_config["bucket"]
+    s3_archive = boto3.resource("s3", **s3_archive_config)
+
+    s3_archive_bucket = s3_archive.Bucket(archive_bucket)
     conn = connect_to_db()
     with open("tagged_recordings.sql", "r") as f:
         taggedthermals_sql = f.read()
@@ -79,60 +85,77 @@ def main():
     with open("tracks_for_recordings.sql", "r") as f:
         tracks_sql = f.read()
 
-
     start_date = parse_date(args.start_date)
-    end_date = start_date + datetime.timedelta(days=2)
-    limit = 10
+    limit = 200
     offset = 0
-    query_sql = taggedthermals_sql.format(start_date, end_date, limit, offset)
-    print(query_sql)
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute(query_sql)
-    rec_rows = cur.fetchall()
-
+    saved = 0
     recs = {}
-    for rec_row in rec_rows:
-        print("Rec ",rec_row["id"])
-        if rec_row["id"] in recs:
-            if rec_row["Tags.id"] is not None:
-                existing_rec = recs[rec_row["id"]]
-                if "tags" not in existing_rec:
-                    existing_rec["tags"] = []
-                tag = map_recording_tag(rec_row)
-                print("Adding tag to ",rec_row["id"],tag)
-                existing_rec["tags"].append(tag)
-            continue        
+    while True:
+        query_sql = taggedthermals_sql.format(start_date, limit, offset)
+        cur.execute(query_sql)
+        rec_rows = cur.fetchall()
+        if rec_rows is None or len(rec_rows) == 0:
+            print("Finished")
+            break
+        for rec_row in rec_rows:
+            if rec_row["id"] in recs:
+                if rec_row["Tags.id"] is not None:
+                    existing_rec = recs[rec_row["id"]]
+                    if "tags" not in existing_rec:
+                        existing_rec["tags"] = []
+                    tag = map_recording_tag(rec_row)
+                    existing_rec["tags"].append(tag)
+                continue
 
-        # save any recordings as we are now on new rec
-        for rec in recs.values():
-            out_file = download_dir / f"{rec["id"]}.txt"
+            # save any recordings as we are now on new rec
+            for rec in recs.values():
+                save_rec(s3_archive_bucket, rec, download_dir)
+                saved += 1
+                if saved % 100 == 0:
+                    print("Saved ", saved)
+            recs = {}
+            track_q = tracks_sql.format(rec_row["id"])
+            cur.execute(track_q)
+            tracks_rows = cur.fetchall()
 
-            print("Writing out to ",out_file)
-            with out_file.open("w") as f:
-                json.dump(rec,f, indent=4, cls=CustomJSONEncoder)
-        #    return
+            tracks = {}
+            for track_row in tracks_rows:
+                track_id = track_row["id"]
+                if track_id in tracks:
+                    tag = map_track_tag(track_row)
+                    tracks[track_id]["tags"].append(tag)
+                else:
+                    track_data = get_track_data(s3, bucket_name, track_row["id"])
+                    track_row["data"] = track_data
+                    mapped_track = map_track(track_row)
+                    tracks[track_id] = mapped_track
 
-        recs = {}
-        track_q = tracks_sql.format(rec_row["id"])
-        cur.execute(track_q)
-        tracks_rows = cur.fetchall()
-        
-        tracks = {}
-        for track_row in tracks_rows:
-            track_id = track_row["id"]
-            if track_id in tracks:
-                tag = map_track_tag(track_row)
-                tracks[track_id]["tags"].append(tag)
-            else:
-                track_data = get_track_data(s3, bucket_name, track_row["id"])
-                track_row["data"]= track_data
-                mapped_track = map_track(track_row)
-                tracks[track_id] = mapped_track
-                
-        recording = map_recording(rec_row)
-        recording["tracks"]= list(tracks.items())
-        recs[recording["id"]] = recording
-        print("Added ", recording)
+            recording = map_recording(rec_row)
+            recording["tracks"] = list(tracks.items())
+            recs[recording["id"]] = recording
+        offset += limit
+    # save any recordings as we are now on new rec
+    for rec in recs.values():
+        save_rec(s3_archive_bucket, rec, download_dir)
+
+
+def save_rec(s3_bucket, rec, out_dir):
+    dtstring = rec["recordingDateTime"].strftime("%Y%m%d-%H%M%S")
+    # match old cptv-download so dont redl files
+    file_base = f'{rec["id"]}-{dtstring}-{rec["deviceName"]}.txt'
+    # str(rec["id"]) + "-" + dtstring + "-" + r["deviceName"]
+    out_folder = get_distributed_folder(file_base)
+    out_file = out_dir / out_folder / file_base
+    print("Writing to ", out_file)
+    out_file.parent.mkdir(exist_ok=True, parents=True)
+    with out_file.open("w") as f:
+        json.dump(rec, f, indent=4, cls=CustomJSONEncoder)
+    cptv_file = out_file.with_suffix(".cptv")
+
+    with cptv_file.open("wb") as f:
+        s3_bucket.download_fileobj(rec["rawFileKey"], f)
+
 
 def get_track_data(s3, bucket_name, track_id):
     obj = s3.Object(bucket_name, f"Track/{track_id}")
@@ -160,55 +183,58 @@ def map_track_tag(track_tag):
         "path": track_tag["TrackTags.path"],
         "model": track_tag["TrackTags.model"],
     }
-    
-    if (track_tag_base["automatic"]):
+
+    if track_tag_base["automatic"]:
         return track_tag_base
     else:
         track_tag_base["userId"] = track_tag["TrackTags.UserId"]
         track_tag_base["userName"] = track_tag["TrackTags.User.userName"]
         return track_tag_base
-        
+
+
 def map_track(track):
     t = {
         "id": track["id"],
         "start": track["startSeconds"],
         "end": track["endSeconds"],
-        "filtered":track["filtered"],
+        "filtered": track["filtered"],
     }
     if track.get("tracking_score") is not None:
-        t["tracking_score"] = track["tracking_score"];
+        t["tracking_score"] = track["tracking_score"]
     if track.get("minFreqHz") is not None:
-        t["minFreq"] = track["minFreqHz"];
+        t["minFreq"] = track["minFreqHz"]
     if track.get("maxFreqHz") is not None:
-        t["maxFreqHz"] = track["maxFreqHz"];
-    
+        t["maxFreqHz"] = track["maxFreqHz"]
+
     positions = []
     for position in track["data"]["positions"]:
         positions.append(map_position(position))
 
     t["positions"] = positions
-    track_tag = map_track_tag(track)  
-    t["tags"] = [track_tag]   
+    track_tag = map_track_tag(track)
+    t["tags"] = [track_tag]
     return t
 
+
 def map_position(position):
-    if isinstance(position,list):
+    if isinstance(position, list):
         return {
-        "x": position[1][0],
-        "y": position[1][1],
-        "width": position[1][2] - position[1][0],
-        "height": position[1][3] - position[1][1],
-        "frameTime": position[0],
+            "x": position[1][0],
+            "y": position[1][1],
+            "width": position[1][2] - position[1][0],
+            "height": position[1][3] - position[1][1],
+            "frameTime": position[0],
         }
     return {
-      "x": position["x"],
-      "y": position["y"],
-      "width": position["width"],
-      "height": position["height"],
-      "order": position["frame_number"] if "frame_number" else position["order"],
-      "mass": position["mass"],
-      "blank": position["blank"],
-    };
+        "x": position["x"],
+        "y": position["y"],
+        "width": position["width"],
+        "height": position["height"],
+        "order": position["frame_number"] if "frame_number" else position["order"],
+        "mass": position["mass"],
+        "blank": position["blank"],
+    }
+
 
 def map_recording(recording):
     new_rec = {
@@ -224,25 +250,26 @@ def map_recording(recording):
         "recordingDateTime": recording["recordingDateTime"],
         "stationName": recording["Station.name"],
         "type": recording["type"],
+        "rawFileKey": recording["rawFileKey"],
     }
     if recording["Tags.id"] is not None:
         new_rec["tags"] = [map_recording_tag(recording)]
     if recording.get("fileHash") is not None:
-        new_rec["fileHash"]= recording["fileHash"]
-  
+        new_rec["fileHash"] = recording["fileHash"]
+
     if recording.get("rawMimeType") is not None:
-        new_rec["rawMimeType"]= recording["rawMimeType"]
+        new_rec["rawMimeType"] = recording["rawMimeType"]
 
     if recording.get("StationId") is not None:
-        new_rec["stationId"]= recording["StationId"]
+        new_rec["stationId"] = recording["StationId"]
 
     if recording.get("additionalMetadata") is not None:
-        new_rec["additionalMetadata"]= recording["additionalMetadata"]
+        new_rec["additionalMetadata"] = recording["additionalMetadata"]
 
     return new_rec
 
+
 def map_recording_tag(rec_tag):
-    print("Map rec tag ", rec_tag)
     tag = {
         "automatic": rec_tag["Tags.automatic"],
         "confidence": rec_tag["Tags.confidence"],
@@ -253,20 +280,28 @@ def map_recording_tag(rec_tag):
         "createdAt": rec_tag["Tags.createdAt"],
         "comment": rec_tag["Tags.comment"],
     }
-    if rec_tag["Tags.taggerId"] is not None :
+    if rec_tag["Tags.taggerId"] is not None:
         tag["Tags.taggerId"] = rec_tag["Tags.taggerId"]
-        if rec_tag.get("Tags.tagger.userName") is not None :
+        if rec_tag.get("Tags.tagger.userName") is not None:
             tag["Tags.taggerName"] = rec_tag["Tags.tagger.userName"]
-        
-    
-    if rec_tag["Tags.startTime"]  is not None and rec_tag["Tags.startTime"] is not None:
-        tag["Tags.startTime"] = rec_tag["Tags.startTime"];
-    
+
+    if rec_tag["Tags.startTime"] is not None and rec_tag["Tags.startTime"] is not None:
+        tag["Tags.startTime"] = rec_tag["Tags.startTime"]
+
     if rec_tag["Tags.duration"] is not None and rec_tag["Tags.duration"] is not None:
         tag["Tags.duration"] = rec_tag["Tags.duration"]
-    
+
     return tag
 
+
+def get_distributed_folder(name, num_folders=256, seed=31):
+    """Creates a hash of the name then returns the modulo num_folders"""
+    str_bytes = str.encode(name)
+    hash_code = 0
+    for byte in str_bytes:
+        hash_code = hash_code * seed + byte
+
+    return "{:02x}".format(hash_code % num_folders)
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -277,7 +312,6 @@ class CustomJSONEncoder(json.JSONEncoder):
             return str(obj)
         # Let the base class default method raise the TypeError
         return json.JSONEncoder.default(self, obj)
-
 
 
 if __name__ == "__main__":
