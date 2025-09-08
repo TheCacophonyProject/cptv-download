@@ -58,15 +58,28 @@ def connect_to_db():
 s3_archive_bucket = None
 
 
+def init_logging():
+    """Set up logging for use by various classifier pipeline scripts.
+
+    Logs will go to stderr.
+    """
+
+    fmt = "%(levelname)7s %(message)s"
+    logging.basicConfig(
+        stream=sys.stderr, level=logging.INFO, format=fmt, datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+
 def main():
     args = parse_args()
+    init_logging()
     download_dir = Path(args.out_folder)
     download_dir.mkdir(exist_ok=True)
 
-    print("Running CPTV Download on cacodb")
+    logging.info("Running CPTV Download on cacodb")
 
     if not os.path.exists(CONFIG_FILE):
-        print(f"failed to find config file '{CONFIG_FILE}'")
+        logging.info(f"failed to find config file '{CONFIG_FILE}'")
         sys.exit()
 
     with open(CONFIG_FILE, "r") as f:
@@ -102,7 +115,7 @@ def main():
     for i in range(num_processes):
         p = Process(
             target=save_file_process,
-            args=(s3_queue),
+            args=(s3_queue,),
         )
         processes.append(p)
         p.start()
@@ -112,7 +125,7 @@ def main():
         cur.execute(query_sql)
         rec_rows = cur.fetchall()
         if rec_rows is None or len(rec_rows) == 0:
-            print("Finished")
+            logging.info("Finished")
             break
         for rec_row in rec_rows:
             if rec_row["id"] in recs:
@@ -126,10 +139,10 @@ def main():
 
             # save any recordings as we are now on new rec
             for rec in recs.values():
-                save_rec(s3_archive_bucket, rec, download_dir, s3_queue)
+                save_rec(rec, download_dir, s3_queue)
                 saved += 1
                 if saved % 100 == 0:
-                    print("Saved ", saved)
+                    logging.info("Saved %s", saved)
             recs = {}
             track_q = tracks_sql.format(rec_row["id"])
             cur.execute(track_q)
@@ -143,18 +156,19 @@ def main():
                     tracks[track_id]["tags"].append(tag)
                 else:
                     track_data = get_track_data(s3, bucket_name, track_row["id"])
-                    track_row["data"] = track_data
+                    if track_data is not None:
+                        track_row["data"] = track_data
                     mapped_track = map_track(track_row)
                     tracks[track_id] = mapped_track
 
             recording = map_recording(rec_row)
-            recording["tracks"] = list(tracks.items())
+            recording["tracks"] = list(tracks.values())
             recs[recording["id"]] = recording
 
         offset += limit
     # save any recordings as we are now on new rec
     for rec in recs.values():
-        save_rec(s3_archive_bucket, rec, download_dir, s3_queue)
+        save_rec(rec, download_dir, s3_queue)
 
     for i in range(len(processes)):
         s3_queue.put(("DONE"))
@@ -175,7 +189,7 @@ def save_file_process(queue):
 
 def save_rec_file(data):
     filename, key = data
-    print("Downloading ", key)
+    # logging.info("Downloading %s", key)
     with open(filename, "wb") as f:
         s3_archive_bucket.download_fileobj(key, f)
 
@@ -187,20 +201,23 @@ def save_rec(rec, out_dir, s3_queue):
     # str(rec["id"]) + "-" + dtstring + "-" + r["deviceName"]
     out_folder = get_distributed_folder(file_base)
     out_file = out_dir / out_folder / file_base
-    print("Writing to ", out_file)
+    logging.debug("Writing to %s", out_file)
     out_file.parent.mkdir(exist_ok=True, parents=True)
     with out_file.open("w") as f:
         json.dump(rec, f, indent=4, cls=CustomJSONEncoder)
     cptv_file = out_file.with_suffix(".cptv")
     if cptv_file.exists():
         return
-    s3_queue.append((str(cptv_file), f'objectstore/prod/{rec["rawFileKey"]}'))
+    s3_queue.put((str(cptv_file), f'objectstore/prod/{rec["rawFileKey"]}'))
 
 
 def get_track_data(s3, bucket_name, track_id):
-    obj = s3.Object(bucket_name, f"Track/{track_id}")
-    response = obj.get()
-
+    try:
+        obj = s3.Object(bucket_name, f"Track/{track_id}")
+        response = obj.get()
+    except:
+        logging.error("Couldn't get track data for track %s", track_id)
+        return None
     # Get the StreamingBody
     body = response["Body"]
 
@@ -247,8 +264,9 @@ def map_track(track):
         t["maxFreqHz"] = track["maxFreqHz"]
 
     positions = []
-    for position in track["data"]["positions"]:
-        positions.append(map_position(position))
+    if "data" in track:
+        for position in track["data"]["positions"]:
+            positions.append(map_position(position))
 
     t["positions"] = positions
     track_tag = map_track_tag(track)
@@ -270,9 +288,13 @@ def map_position(position):
         "y": position["y"],
         "width": position["width"],
         "height": position["height"],
-        "order": position["frame_number"] if "frame_number" else position["order"],
-        "mass": position["mass"],
-        "blank": position["blank"],
+        "order": (
+            position["frame_number"]
+            if "frame_number" in position
+            else position["order"]
+        ),
+        "mass": position.get("mass", None),
+        "blank": position.get("blank", False),
     }
 
 
