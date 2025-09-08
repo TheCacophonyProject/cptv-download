@@ -73,7 +73,7 @@ def main():
     s3 = boto3.resource("s3", **s3_config)
 
     s3_archive_config = config["s3_archive_auth"]
-    archive_bucket = s3_config["bucket"]
+    archive_bucket = s3_archive_config["bucket"]
     del s3_archive_config["bucket"]
     s3_archive = boto3.resource("s3", **s3_archive_config)
 
@@ -152,9 +152,10 @@ def save_rec(s3_bucket, rec, out_dir):
     with out_file.open("w") as f:
         json.dump(rec, f, indent=4, cls=CustomJSONEncoder)
     cptv_file = out_file.with_suffix(".cptv")
-
+    if cptv_file.exists():
+        return
     with cptv_file.open("wb") as f:
-        s3_bucket.download_fileobj(rec["rawFileKey"], f)
+        s3_bucket.download_fileobj(f'objectstore/prod/{rec["rawFileKey"]}', f)
 
 
 def get_track_data(s3, bucket_name, track_id):
