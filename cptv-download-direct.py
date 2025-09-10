@@ -21,6 +21,7 @@ import time
 HOST_NAME = socket.gethostname()
 CONFIG_FILE = "./config.yaml"
 DUMP_EXT = ".pgdump"
+OLD_TRACKER = parse_date("2021-06-01 17:02:30.592 +1200")
 
 
 def parse_args():
@@ -328,6 +329,15 @@ def map_recording(recording):
     if recording.get("additionalMetadata") is not None:
         new_rec["additionalMetadata"] = recording["additionalMetadata"]
 
+    # was a bug pre this where background image was processed as well as clip so all regions are off by one frame
+    tracker_version = 10
+    if "recordingDateTime" in new_rec:
+        try:
+            if new_rec["recordingDateTime"] < OLD_TRACKER:
+                tracker_version = 9
+        except (ValueError, TypeError):
+            tracker_version = 9
+    new_rec["tracker_version"] = tracker_version
     return new_rec
 
 
