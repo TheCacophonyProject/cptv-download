@@ -304,7 +304,6 @@ def map_recording(recording):
         "id": recording["id"],
         "deviceId": recording["DeviceId"],
         "duration": recording["duration"],
-        "location": recording["location"],
         "deviceName": recording["Device.deviceName"],
         "groupId": recording["Group.id"],
         "groupName": recording["Group.groupName"],
@@ -315,6 +314,9 @@ def map_recording(recording):
         "type": recording["type"],
         "rawFileKey": recording["rawFileKey"],
     }
+    if recording.get("lat") is not None and recording.get("lng") is not None:
+        new_rec["location"] = {"lat": recording.get("lat"), "lng": recording.get("lng")}
+
     if recording["Tags.id"] is not None:
         new_rec["tags"] = [map_recording_tag(recording)]
     if recording.get("fileHash") is not None:
@@ -325,6 +327,14 @@ def map_recording(recording):
 
     if recording.get("StationId") is not None:
         new_rec["stationId"] = recording["StationId"]
+        if (
+            recording.get("Station.lat") is not None
+            and recording.get("Station.lng") is not None
+        ):
+            new_rec["stationlocation"] = {
+                "lat": recording.get("Station.lat"),
+                "lng": recording.get("Station.lng"),
+            }
 
     if recording.get("additionalMetadata") is not None:
         new_rec["additionalMetadata"] = recording["additionalMetadata"]
