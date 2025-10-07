@@ -128,6 +128,7 @@ def main():
     while True:
         query_sql = taggedthermals_sql.format(args.type, start_date, limit, offset)
         cur.execute(query_sql)
+        logging.info("Querying offset %s limit %s", limit, offset)
         rec_rows = cur.fetchall()
         if rec_rows is None or len(rec_rows) == 0:
             logging.info("Finished")
@@ -144,7 +145,7 @@ def main():
 
             # save any recordings as we are now on new rec
             for rec in recs.values():
-                save_rec(rec, download_dir, s3_queue)
+                save_rec(rec, download_dir, s3_queue, args.type)
                 saved += 1
                 if saved % 100 == 0:
                     logging.info("Saved %s", saved)
@@ -173,7 +174,7 @@ def main():
         offset += limit
     # save any recordings as we are now on new rec
     for rec in recs.values():
-        save_rec(rec, download_dir, s3_queue)
+        save_rec(rec, download_dir, s3_queue, args.type)
 
     for i in range(len(processes)):
         s3_queue.put(("DONE"))
@@ -199,7 +200,7 @@ def save_rec_file(data):
         s3_archive_bucket.download_fileobj(key, f)
 
 
-def save_rec(rec, out_dir, s3_queue):
+def save_rec(rec, out_dir, s3_queue, file_type):
     dtstring = rec["recordingDateTime"].strftime("%Y%m%d-%H%M%S")
     # match old cptv-download so dont redl files
     file_base = f'{rec["id"]}-{dtstring}-{rec["deviceName"]}.txt'
@@ -210,10 +211,13 @@ def save_rec(rec, out_dir, s3_queue):
     out_file.parent.mkdir(exist_ok=True, parents=True)
     with out_file.open("w") as f:
         json.dump(rec, f, indent=4, cls=CustomJSONEncoder)
-    cptv_file = out_file.with_suffix(".cptv")
-    if cptv_file.exists():
+    if file_type == "thermalRaw":
+        out_file = out_file.with_suffix(".cptv")
+    else:
+        out_file = out_file.with_suffix(".m4a")
+    if out_file.exists():
         return
-    s3_queue.put((str(cptv_file), f'objectstore/prod/{rec["rawFileKey"]}'))
+    s3_queue.put((str(out_file), f'objectstore/prod/{rec["rawFileKey"]}'))
 
 
 def get_track_data(s3, bucket_name, track_id):
@@ -270,10 +274,11 @@ def map_track(track):
 
     positions = []
     if "data" in track:
-        for position in track["data"]["positions"]:
-            positions.append(map_position(position))
+        if "positions" in track["data"]:
+            for position in track["data"]["positions"]:
+                positions.append(map_position(position))
 
-    t["positions"] = positions
+            t["positions"] = positions
     track_tag = map_track_tag(track)
     t["tags"] = [track_tag]
     return t
@@ -296,7 +301,7 @@ def map_position(position):
         "order": (
             position["frame_number"]
             if "frame_number" in position
-            else position["order"]
+            else position.get("order")
         ),
         "mass": position.get("mass", None),
         "blank": position.get("blank", False),

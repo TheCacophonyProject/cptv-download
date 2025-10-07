@@ -19,9 +19,9 @@ def parse_args():
     return args
 
 
-# probably better off running in bash as will take ages
-def restore_backup(backup_file):
-    cmd = f"sudo -u postgres pg_restore -d cacodb {backup_file}"
+# # probably better off running in bash as will take ages
+# def restore_backup(backup_file):
+#     cmd = f"sudo -u postgres pg_restore --clean -d cacodb {backup_file}"
 
 
 #   }
@@ -39,8 +39,10 @@ def main():
     with open(CONFIG_FILE, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     s3_config = config["s3_archive_auth"]
-    bucket_name = s3_config["bucket"]
+    bucket_name = s3_config["db_bucket"]
+    del s3_config["db_bucket"]
     del s3_config["bucket"]
+
     s3 = boto3.resource("s3", **s3_config)
     bucket = s3.Bucket(bucket_name)
 
@@ -51,11 +53,19 @@ def main():
             latest_file = obj.key
             latest_modified = obj.last_modified
     print(f"The latest file is: {latest_file}")
-    bucket.download_file(latest_file, download_dir)
-    print(f"Downloaded too ", download_dir)
+    s3_file = Path(latest_file)
+    print(s3_file.name)
+    save_file = download_dir/s3_file.name
+    if save_file.exists():
+        print("DB file already exists ", save_file)
+    else:
+        bucket.download_file(latest_file, save_file)
+        print(f'Downloaded too {save_file} linking to {download_dir / "latest.pgdump"}')
+        link_f = download_dir / "latest.pgdump"
+        os.symlink(save_file, link_f)
 
     print(
-        f"Restore with sudo -u postgres pg_restore -d cacodb {download_dir/latest_file}"
+        f"Restore with sudo -u postgres pg_restore --clean -d cacodb {download_dir/"latest.pgdump"}"
     )
 
 
