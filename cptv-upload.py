@@ -3,7 +3,7 @@ import glob
 import os
 import json
 from cacophonyapi.user import UserAPI as API
-
+import librosa
 from pathlib import Path
 import datetime
 
@@ -25,21 +25,29 @@ def upload_recording(api, file_name, args):
         api.upload_recording(
             args.groupname, args.devicename, str(file_name), props=props
         )
-    elif file_name.suffix in [".m4a", ".mp3", ".wav"]:
+    elif file_name.suffix in [".m4a", ".mp3", ".wav", ".flac"]:
+        duration = None
         meta_f = file_name.with_suffix(".txt")
         if not meta_f.exists():
             print("Require audio meta data to get rec data time")
             rec_date = file_name.name[:10]
             rec_date = datetime.datetime.strptime(rec_date, "%Y-%m-%d")
             rec_date = rec_date.isoformat()
+            duration = librosa.get_duration(filename=file_name)
         else:
             with open(meta_f, "r") as f:
                 meta = json.load(f)
-            rec_date = meta["recordingDateTime"]
+            rec_date = meta.get("recordingDateTime")
+            if rec_date is None:
+                rec_date = datetime.datetime.now().isoformat()
+            duration = meta["rec_end"]
+            # load loc from here
         props = {
+            "duration": duration,
             "type": "audio",
             "recordingDateTime": rec_date,
             "additionalMetadata": {"file": file_name.name},
+            # "location": {"coordinates": [172.6366,-43.5320]},
         }
         api.upload_recording(
             args.groupname, args.devicename, str(file_name), props=props
@@ -65,7 +73,8 @@ def main():
     base_dir = Path(args.filename)
     if base_dir.is_dir():
         for file_name in base_dir.rglob("*"):
-            if file_name.is_file():
+            if file_name.is_file() and file_name.suffix != ".txt":
+
                 upload_recording(api, file_name, args)
     else:
         upload_recording(api, base_dir, args)

@@ -7,7 +7,7 @@ from cacophonyapi.user import UserAPI as API
 
 
 def reprocess(args):
-    """ Reprocesses all specified recording from specified server """
+    """Reprocesses all specified recording from specified server"""
 
     api = API(args.server, args.user, args.password)
 
