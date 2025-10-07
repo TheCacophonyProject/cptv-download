@@ -55,7 +55,7 @@ def main():
     print(f"The latest file is: {latest_file}")
     s3_file = Path(latest_file)
     print(s3_file.name)
-    save_file = download_dir/s3_file.name
+    save_file = download_dir / s3_file.name
     if save_file.exists():
         print("DB file already exists ", save_file)
     else:
@@ -65,7 +65,7 @@ def main():
         os.symlink(save_file, link_f)
 
     print(
-        f"Restore with sudo -u postgres pg_restore --clean -d cacodb {download_dir/"latest.pgdump"}"
+        f"Restore with sudo -u postgres pg_restore --clean -d cacodb {download_dir/'latest.pgdump'}"
     )
 
 

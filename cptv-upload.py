@@ -30,10 +30,9 @@ def upload_recording(api, file_name, args):
         meta_f = file_name.with_suffix(".txt")
         if not meta_f.exists():
             print("Require audio meta data to get rec data time")
-            # rec_date = file_name.name[:10]
-            # rec_date = datetime.datetime.strptime(rec_date, "%Y-%m-%d")
-            # rec_date = rec_date.isoformat()
-            rec_date = datetime.datetime.now().isoformat()
+            rec_date = file_name.name[:10]
+            rec_date = datetime.datetime.strptime(rec_date, "%Y-%m-%d")
+            rec_date = rec_date.isoformat()
             duration = librosa.get_duration(filename=file_name)
         else:
             with open(meta_f, "r") as f:
@@ -42,14 +41,14 @@ def upload_recording(api, file_name, args):
             if rec_date is None:
                 rec_date = datetime.datetime.now().isoformat()
             duration = meta["rec_end"]
+            # load loc from here
         props = {
             "duration": duration,
             "type": "audio",
             "recordingDateTime": rec_date,
             "additionalMetadata": {"file": file_name.name},
-            "location": {"coordinates": [174.72210693359375, -36.81385040283203]},
+            # "location": {"coordinates": [172.6366,-43.5320]},
         }
-        print(props)
         api.upload_recording(
             args.groupname, args.devicename, str(file_name), props=props
         )
