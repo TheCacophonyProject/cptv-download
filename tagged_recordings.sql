@@ -48,7 +48,7 @@ from
 	inner join "Devices" as "Device" on
 		"Recording"."DeviceId" = "Device"."id"
 	where
-		(("Recording"."type" = 'thermalRaw'
+		(("Recording"."type" = '{}'
 			and ("Recording"."recordingDateTime" >= '{}')
 			and "Recording"."deletedAt" is null)
 		and ((

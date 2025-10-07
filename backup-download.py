@@ -3,13 +3,9 @@ import yaml
 import os
 import sys
 import boto3
-import datetime
-import subprocess
-from influxdb import InfluxDBClient
 import socket
 import argparse
 from pathlib import Path
-import logging
 
 HOST_NAME = socket.gethostname()
 CONFIG_FILE = "./config.yaml"
@@ -28,14 +24,6 @@ def restore_backup(backup_file):
     cmd = f"sudo -u postgres pg_restore -d cacodb {backup_file}"
 
 
-# export const getTrackData = async (trackId: TrackId) => {
-#   try {
-#     const data = await openS3().getObject(`Track/${trackId}`);
-#     const compressedData = await data.Body.transformToByteArray();
-#     const uncompressed = await gunzip(compressedData);
-#     return JSON.parse(uncompressed.toString("utf-8"));
-#   } catch (e) {
-#     return {};
 #   }
 def main():
     args = parse_args()
@@ -64,6 +52,11 @@ def main():
             latest_modified = obj.last_modified
     print(f"The latest file is: {latest_file}")
     bucket.download_file(latest_file, download_dir)
+    print(f"Downloaded too ", download_dir)
+
+    print(
+        f"Restore with sudo -u postgres pg_restore -d cacodb {download_dir/latest_file}"
+    )
 
 
 if __name__ == "__main__":

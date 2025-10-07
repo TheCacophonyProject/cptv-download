@@ -26,7 +26,11 @@ OLD_TRACKER = parse_date("2021-06-01 17:02:30.592 +1200")
 
 def parse_args():
     parser = argparse.ArgumentParser()
-
+    parser.add_argument(
+        "--type",
+        default="thermalRaw",
+        help="Type of filed to download defaults to thermalRaw",
+    )
     parser.add_argument(
         "--start-date",
         help="If specified, only files recorded on or after this date will be downloaded.",
@@ -37,8 +41,8 @@ def parse_args():
 
 
 def connect_to_db():
-
     try:
+        print("Connecting to localhost as user postgres")
         conn = psycopg2.connect(
             host="localhost", database="cacodb", user="postgres", password="postgres"
         )
@@ -122,7 +126,7 @@ def main():
         p.start()
 
     while True:
-        query_sql = taggedthermals_sql.format(start_date, limit, offset)
+        query_sql = taggedthermals_sql.format(args.type, start_date, limit, offset)
         cur.execute(query_sql)
         rec_rows = cur.fetchall()
         if rec_rows is None or len(rec_rows) == 0:
