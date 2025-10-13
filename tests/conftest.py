@@ -9,7 +9,7 @@ import pytest
 import os
 
 from .testconfig import TestConfig
-from cacophonyapi.user import UserAPI 
+from cacophonyapi.user import UserAPI
 
 
 @pytest.fixture(scope="module")
@@ -51,4 +51,4 @@ def pytest_runtest_makereport(item, call):
         except FileNotFoundError:
             return
         if proc.returncode == 0:
-                     rep.sections.append(("Recent API server logs", proc.stdout))
+            rep.sections.append(("Recent API server logs", proc.stdout))

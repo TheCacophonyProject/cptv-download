@@ -64,9 +64,7 @@ def main():
         link_f = download_dir / "latest.pgdump"
         os.symlink(save_file, link_f)
 
-    print(
-        f"Restore with sudo -u postgres pg_restore --clean -d cacodb {download_dir/'latest.pgdump'}"
-    )
+    print(f"Restore with sudo -u postgres pg_restore --clean -d cacodb {save_file}")
 
 
 if __name__ == "__main__":
