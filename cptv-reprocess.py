@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime, timedelta
 
 from cacophonyapi.user import UserAPI as API
+from dateutil.parser import parse as parse_date
 
 
 def reprocess(args):
@@ -21,35 +22,25 @@ def reprocess(args):
         api.reprocess(recordings)
         return
 
-    hour_ago = datetime.now() - timedelta(hours=1)
     where = {
-        "type": "thermalRaw",
-        "processingState": {"$ne": "FINISHED"},
-        "processingStartTime": {"$or": {"$gte": hour_ago.isoformat(), "$eq": None}},
+        "type": args.type,
     }
-    if args.algorithm_id:
-        where["$or"] = [
-            {"additionalMetadata.algorithm": {"$eq": None}},
-            {"additionalMetadata.algorithm": {"$lt": args.algorithm_id}},
-        ]
-    else:
-        where["additionalMetadata.algorithm"] = {"$eq": None}
+    if args.before is not None:
+        where["recordingDateTime"] = {"$gt": args.before.isoformat()}
+    print(where)
+    if args.group_id:
+        where["GroupId"] = args.group_id
+    if args.device_id:
+        where["DeviceId"] = args.device_id
 
-    if len(args.recording_id) == 2:
-        if args.recording_id[0]:
-            where.setdefault("id", {})["$gte"] = int(args.recording_id[0])
-        if args.recording_id[1]:
-            where.setdefault("id", {})["$lte"] = int(args.recording_id[1])
-
-    q = api.query(where=where, limit=args.limit, raw_json=True)
-    count = q["count"]
-    if count:
-        print(f"Still reprocessing {count} records")
-        print([row["id"] for row in q["rows"]])
-        return
+    # q = api.query(where=where, limit=args.limit, raw_json=True)
+    # count = q["count"]
+    # if count:
+    #     print(f"Still reprocessing {count} records")
+    #     print([row["id"] for row in q["rows"]])
+    #     return
 
     where["processingState"] = "FINISHED"
-    where["processingStartTime"] = {"$or": {"$lt": hour_ago.isoformat(), "$eq": None}}
     rows = api.query(where=where, limit=args.limit)
     recording_ids = [row["id"] for row in rows]
     print(f"Reprocessing recording ids: {recording_ids}")
@@ -58,6 +49,8 @@ def reprocess(args):
 
 def main():
     args = parse_args()
+    if args.before is not None:
+        args.before = parse_date(args.before)
     reprocess(args)
 
 
@@ -93,6 +86,29 @@ def parse_args():
         "-s", "--server", default="https://api.cacophony.org.nz", help="API server URL"
     )
     parser.add_argument(
+        "--before",
+        default=None,
+        help="Proces recordings before this date",
+    )
+    parser.add_argument(
+        "--group-id",
+        type=int,
+        default=None,
+        help="Reprocess all recordings under a group",
+    )
+    parser.add_argument(
+        "--device-id",
+        type=int,
+        default=None,
+        help="Reprocess all recordings under a device",
+    )
+    parser.add_argument(
+        "-t",
+        "--type",
+        default="audio",
+        help="Type of recording",
+    )
+    parser.add_argument(
         "-l",
         "--limit",
         type=int,
@@ -108,14 +124,14 @@ def parse_args():
         help="Specify a recording range start:end or comma separated list of recordings to reprocess id,id2,...",
     )
 
-    parser.add_argument(
-        "-a",
-        "--algorithm",
-        dest="algorithm_id",
-        type=int,
-        default=None,
-        help="Only reprocess recordings with an algorithm_id less than this",
-    )
+    # parser.add_argument(
+    #     "-a",
+    #     "--algorithm",
+    #     dest="algorithm_id",
+    #     type=int,
+    #     default=None,
+    #     help="Only reprocess recordings with an algorithm_id less than this",
+    # )
     return parser.parse_args()
 
 
