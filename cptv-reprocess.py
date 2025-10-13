@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from cacophonyapi.user import UserAPI as API
 from dateutil.parser import parse as parse_date
+import time
 
 
 def reprocess(args):
@@ -26,25 +27,36 @@ def reprocess(args):
         "type": args.type,
     }
     if args.before is not None:
-        where["recordingDateTime"] = {"$gt": args.before.isoformat()}
+        where["recordingDateTime"] = {"$lt": args.before.isoformat()}
+    else:
+        where["recordingDateTime"] = {"$lt": datetime.now().isoformat()}
+
     print(where)
     if args.group_id:
         where["GroupId"] = args.group_id
     if args.device_id:
         where["DeviceId"] = args.device_id
 
-    # q = api.query(where=where, limit=args.limit, raw_json=True)
-    # count = q["count"]
-    # if count:
-    #     print(f"Still reprocessing {count} records")
-    #     print([row["id"] for row in q["rows"]])
-    #     return
-
     where["processingState"] = "FINISHED"
-    rows = api.query(where=where, limit=args.limit)
-    recording_ids = [row["id"] for row in rows]
-    print(f"Reprocessing recording ids: {recording_ids}")
-    api.reprocess(recording_ids)
+    limit = args.limit
+    if limit is None:
+        limit = 100
+
+    while True:
+        rows = api.query(where=where, limit=limit)
+        # Sanity check
+        if args.device_id is not None:
+            for row in rows:
+                assert row.get["deviceId"] == args.device_id
+        if args.device_id is not None:
+            for row in rows:
+                assert row["groupId"] == args.group_id
+        if len(rows) < limit:
+            print("Done")
+            break
+        recording_ids = [row["id"] for row in rows]
+        print(f"Reprocessing recording ids: {recording_ids}")
+        api.reprocess(recording_ids)
 
 
 def main():
