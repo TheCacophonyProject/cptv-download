@@ -57,7 +57,8 @@ def reprocess(args):
         print(f"Reprocessing recording ids: {recording_ids}")
         api.reprocess(recording_ids)
         reprocessed += len(recording_ids)
-        if len(rows) < limit:
+
+        if len(rows) == 0:
             print("Done")
             break
 
