@@ -400,7 +400,12 @@ def main():
 
     server_list = []
     if args.server:
-        server_list = args.server if isinstance(args.server, list) else [args.server]
+        if args.test:
+            server_list = ["https://api-test.cacophony.org.nz"]
+        else:
+            server_list = (
+                args.server if isinstance(args.server, list) else [args.server]
+            )
 
     for server in server_list:
         downloader.process(server)
@@ -460,6 +465,11 @@ def parse_args():
         const=True,
         default=True,
         help="Overwrite existing metadata")
+    parser.add_argument(
+        '--test',
+        action='store_true',
+        default=False,
+        help='Use api-test')
     parser.add_argument(
         '-v', '--verbose',
         action='store_true',
