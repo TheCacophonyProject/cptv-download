@@ -31,6 +31,9 @@ def reprocess(args):
     else:
         where["recordingDateTime"] = {"$lt": datetime.now().isoformat()}
 
+    if args.before is not None:
+        where["recordingDateTime"] = {"$gt": args.after.isoformat()}
+
     print(where)
     if args.group_id:
         where["GroupId"] = args.group_id
@@ -39,11 +42,9 @@ def reprocess(args):
 
     where["processingState"] = "FINISHED"
     limit = args.limit
-    if limit is None:
-        limit = 100
-
-    while True:
-        rows = api.query(where=where, limit=limit)
+    reprocessed = 0
+    while limit is None or reprocessed < limit:
+        rows = api.query(where=where, limit=100)
         # Sanity check
         if args.device_id is not None:
             for row in rows:
@@ -51,18 +52,23 @@ def reprocess(args):
         if args.device_id is not None:
             for row in rows:
                 assert row["groupId"] == args.group_id
-        if len(rows) < limit:
-            print("Done")
-            break
+
         recording_ids = [row["id"] for row in rows]
         print(f"Reprocessing recording ids: {recording_ids}")
         api.reprocess(recording_ids)
+        reprocessed += len(recording_ids)
+
+        if len(rows) == 0:
+            print("Done")
+            break
 
 
 def main():
     args = parse_args()
     if args.before is not None:
         args.before = parse_date(args.before)
+    if args.after is not None:
+        args.after = parse_date(args.after)
     reprocess(args)
 
 
@@ -103,6 +109,11 @@ def parse_args():
         help="Proces recordings before this date",
     )
     parser.add_argument(
+        "--after",
+        default=None,
+        help="Proces recordings before this date",
+    )
+    parser.add_argument(
         "--group-id",
         type=int,
         default=None,
@@ -124,7 +135,7 @@ def parse_args():
         "-l",
         "--limit",
         type=int,
-        default=100,
+        default=None,
         help="Number of recordings to set to reprocessing",
     )
     parser.add_argument(
