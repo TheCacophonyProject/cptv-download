@@ -22,6 +22,9 @@ def upload_recording(api, file_name, args):
         }
         if rec_date is not None:
             props["recordingDateTime"] = rec_date.isoformat()
+        else:
+            
+            props["recordingDateTime"] =datetime.datetime.now().isoformat()
         api.upload_recording(
             args.groupname, args.devicename, str(file_name), props=props
         )
