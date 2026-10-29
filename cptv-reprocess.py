@@ -31,7 +31,7 @@ def reprocess(args):
     else:
         where["recordingDateTime"] = {"$lt": datetime.now().isoformat()}
 
-    if args.before is not None:
+    if args.after is not None:
         where["recordingDateTime"] = {"$gt": args.after.isoformat()}
 
     print(where)
