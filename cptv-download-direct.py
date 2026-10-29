@@ -168,7 +168,7 @@ def main():
                     tracks[track_id] = mapped_track
 
             recording = map_recording(rec_row)
-            recording["tracks"] = list(tracks.values())
+            recording["Tracks"] = list(tracks.values())
             recs[recording["id"]] = recording
 
         offset += limit
