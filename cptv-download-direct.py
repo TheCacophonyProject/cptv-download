@@ -44,7 +44,12 @@ def connect_to_db():
     try:
         print("Connecting to localhost as user postgres")
         conn = psycopg2.connect(
-            host="localhost", database="cacodb", user="postgres", password="postgres"
+            host="localhost",
+            database="cacodb",
+            user="postgres",
+            password="postgres",
+            # use UTC so datetimes match cptv-download.py (API returns UTC)
+            options="-c timezone=UTC",
         )
         print("Connection to PostgreSQL successful!")
 
@@ -201,6 +206,7 @@ def save_rec_file(data):
 
 
 def save_rec(rec, out_dir, s3_queue, file_type):
+    # session timezone is UTC (see connect_to_db) to match cptv-download.py
     dtstring = rec["recordingDateTime"].strftime("%Y%m%d-%H%M%S")
     # match old cptv-download so dont redl files
     file_base = f'{rec["id"]}-{dtstring}-{rec["deviceName"]}.txt'
