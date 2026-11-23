@@ -23,10 +23,8 @@ CONFIG_FILE = "./config.yaml"
 DUMP_EXT = ".pgdump"
 OLD_TRACKER = parse_date("2021-06-01 17:02:30.592 +1200")
 
-# recording filters substituted into tagged_recordings.sql
-TAG_FILTERS = {
-    # a human tag on a track, or a human tag on the recording itself
-    "human": """
+# a human tag on a track, or a human tag on the recording itself
+HUMAN_TAGGED = """
         exists (
             select 1 from "Tracks"
             inner join "TrackTags" as "Tags" on "Tracks"."id" = "Tags"."TrackId"
@@ -39,7 +37,11 @@ TAG_FILTERS = {
             select 1 from "Tags"
             where "Tags"."RecordingId" = "Recording".id
                 and not "Tags".automatic
-        )""",
+        )"""
+
+# recording filters substituted into tagged_recordings.sql
+TAG_FILTERS = {
+    "human": HUMAN_TAGGED,
     # any track with a tag, automatic or human
     "any": """
         exists (
@@ -49,8 +51,9 @@ TAG_FILTERS = {
                 and "Tracks"."archivedAt" is null
                 and "Tags"."archivedAt" is null
         )""",
-    # a track where the Master AI model tagged it as noise
-    "master-noise": """
+    # a track where the Master AI model tagged it as noise,
+    # and no human has tagged the recording or any of its tracks
+    "master-noise": f"""
         exists (
             select 1 from "Tracks"
             inner join "TrackTags" as "Tags" on "Tracks"."id" = "Tags"."TrackId"
@@ -60,7 +63,8 @@ TAG_FILTERS = {
                 and "Tags".automatic
                 and "Tags"."model" = 'Master'
                 and "Tags"."what" = 'noise'
-        )""",
+        )
+        and not ({HUMAN_TAGGED})""",
 }
 
 
@@ -80,7 +84,7 @@ def parse_args():
         choices=TAG_FILTERS.keys(),
         default="human",
         help="human: recordings with human tags (default). any: recordings with any tagged tracks. "
-        "master-noise: recordings with a track the Master model tagged as noise",
+        "master-noise: recordings with a track the Master model tagged as noise and no human tags",
     )
     parser.add_argument("out_folder", help="Root folder to place downloaded files in.")
     args = parser.parse_args()
