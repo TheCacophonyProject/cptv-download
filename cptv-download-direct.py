@@ -23,6 +23,34 @@ CONFIG_FILE = "./config.yaml"
 DUMP_EXT = ".pgdump"
 OLD_TRACKER = parse_date("2021-06-01 17:02:30.592 +1200")
 
+# recording filters substituted into tagged_recordings.sql
+TAG_FILTERS = {
+    # a human tag on a track, or a human tag on the recording itself
+    "human": """
+        exists (
+            select 1 from "Tracks"
+            inner join "TrackTags" as "Tags" on "Tracks"."id" = "Tags"."TrackId"
+            where "Tracks"."RecordingId" = "Recording".id
+                and "Tracks"."archivedAt" is null
+                and "Tags"."archivedAt" is null
+                and not "Tags".automatic
+        )
+        or exists (
+            select 1 from "Tags"
+            where "Tags"."RecordingId" = "Recording".id
+                and not "Tags".automatic
+        )""",
+    # any track with a tag, automatic or human
+    "any": """
+        exists (
+            select 1 from "Tracks"
+            inner join "TrackTags" as "Tags" on "Tracks"."id" = "Tags"."TrackId"
+            where "Tracks"."RecordingId" = "Recording".id
+                and "Tracks"."archivedAt" is null
+                and "Tags"."archivedAt" is null
+        )""",
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -34,6 +62,12 @@ def parse_args():
     parser.add_argument(
         "--start-date",
         help="If specified, only files recorded on or after this date will be downloaded.",
+    )
+    parser.add_argument(
+        "--tagged",
+        choices=TAG_FILTERS.keys(),
+        default="human",
+        help="human: recordings with human tags (default). any: recordings with any tagged tracks",
     )
     parser.add_argument("out_folder", help="Root folder to place downloaded files in.")
     args = parser.parse_args()
@@ -107,13 +141,20 @@ def main():
     global s3_archive_bucket
     s3_archive_bucket = s3_archive.Bucket(archive_bucket)
     conn = connect_to_db()
+    start_date = parse_date(args.start_date)
     with open("tagged_recordings.sql", "r") as f:
-        taggedthermals_sql = f.read()
+        # fill the fixed fields now, leave limit/offset for each page
+        taggedthermals_sql = f.read().format(
+            type=args.type,
+            start_date=start_date,
+            tag_filter=TAG_FILTERS[args.tagged],
+            limit="{limit}",
+            offset="{offset}",
+        )
 
     with open("tracks_for_recordings.sql", "r") as f:
         tracks_sql = f.read()
 
-    start_date = parse_date(args.start_date)
     limit = 200
     offset = 0
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -131,7 +172,7 @@ def main():
         p.start()
 
     while True:
-        query_sql = taggedthermals_sql.format(args.type, start_date, limit, offset)
+        query_sql = taggedthermals_sql.format(limit=limit, offset=offset)
         cur.execute(query_sql)
         logging.info("Querying offset %s limit %s", limit, offset)
         rec_rows = cur.fetchall()
