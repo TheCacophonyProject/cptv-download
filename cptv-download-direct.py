@@ -135,8 +135,9 @@ def main():
     s3 = boto3.resource("s3", **s3_config)
 
     s3_archive_config = config["s3_archive_auth"]
-    archive_bucket = s3_archive_config["bucket"]
-    del s3_archive_config["bucket"]
+    archive_bucket = s3_archive_config.pop("bucket")
+    # db_bucket is only used by backup-download.py, not a boto3 arg
+    s3_archive_config.pop("db_bucket", None)
     s3_archive = boto3.resource("s3", **s3_archive_config)
     global s3_archive_bucket
     s3_archive_bucket = s3_archive.Bucket(archive_bucket)
