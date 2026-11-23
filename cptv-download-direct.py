@@ -3,6 +3,7 @@ import yaml
 import os
 import sys
 import boto3
+from botocore.exceptions import ClientError
 import datetime
 import subprocess
 import psycopg2
@@ -85,6 +86,12 @@ def parse_args():
         default="human",
         help="human: recordings with human tags (default). any: recordings with any tagged tracks. "
         "master-noise: recordings with a track the Master model tagged as noise and no human tags",
+    )
+    parser.add_argument(
+        "--overwrite-meta",
+        action="store_true",
+        help="Rewrite metadata .txt files that already exist. By default recordings "
+        "with existing metadata are skipped (only a missing raw file is downloaded)",
     )
     parser.add_argument("out_folder", help="Root folder to place downloaded files in.")
     args = parser.parse_args()
@@ -178,6 +185,8 @@ def main():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     saved = 0
     recs = {}
+    # recordings whose metadata already exists (when not --overwrite-meta)
+    skipped = set()
     s3_queue = Queue()
     num_processes = 8
     processes = []
@@ -206,6 +215,29 @@ def main():
                     tag = map_recording_tag(rec_row)
                     existing_rec["tags"].append(tag)
                 continue
+            if rec_row["id"] in skipped:
+                # extra tag rows for a recording we already skipped
+                continue
+
+            if not args.overwrite_meta:
+                meta_file = meta_file_path(
+                    download_dir,
+                    rec_row["id"],
+                    rec_row["recordingDateTime"],
+                    rec_row["Device.deviceName"],
+                )
+                if meta_file.exists():
+                    # skip the track queries, but still fetch the raw file
+                    # if an earlier run didn't get it
+                    skipped.add(rec_row["id"])
+                    queue_raw_file(
+                        rec_row["id"],
+                        rec_row["rawFileKey"],
+                        meta_file,
+                        s3_queue,
+                        args.type,
+                    )
+                    continue
 
             # save any recordings as we are now on new rec
             for rec in recs.values():
@@ -239,6 +271,8 @@ def main():
     # save any recordings as we are now on new rec
     for rec in recs.values():
         save_rec(rec, download_dir, s3_queue, args.type)
+        saved += 1
+    logging.info("Saved %s, skipped %s with existing metadata", saved, len(skipped))
 
     for i in range(len(processes)):
         s3_queue.put(("DONE"))
@@ -254,35 +288,63 @@ def save_file_process(queue):
                 break
             save_rec_file(data)
         except:
-            logging.error("Could not save rec", exc_info=True)
+            logging.error("Could not save rec %s", data[0], exc_info=True)
 
 
 def save_rec_file(data):
-    filename, key = data
+    rec_id, filename, key = data
     # logging.info("Downloading %s", key)
-    with open(filename, "wb") as f:
-        s3_archive_bucket.download_fileobj(key, f)
+    # download to a temp file so a failed download doesn't leave an empty
+    # file behind, which save_rec would then skip on later runs
+    tmp_file = filename + ".part"
+    try:
+        with open(tmp_file, "wb") as f:
+            s3_archive_bucket.download_fileobj(key, f)
+    except ClientError as e:
+        if os.path.exists(tmp_file):
+            os.remove(tmp_file)
+        if e.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):
+            logging.warning(
+                "Rec %s raw file not found in archive bucket %s", rec_id, key
+            )
+            return
+        raise
+    except BaseException:
+        if os.path.exists(tmp_file):
+            os.remove(tmp_file)
+        raise
+    os.replace(tmp_file, filename)
+
+
+def meta_file_path(out_dir, rec_id, rec_datetime, device_name):
+    # session timezone is UTC (see connect_to_db) to match cptv-download.py
+    dtstring = rec_datetime.strftime("%Y%m%d-%H%M%S")
+    # match old cptv-download so dont redl files
+    file_base = f"{rec_id}-{dtstring}-{device_name}.txt"
+    out_folder = get_distributed_folder(file_base)
+    return out_dir / out_folder / file_base
+
+
+def queue_raw_file(rec_id, raw_file_key, meta_file, s3_queue, file_type):
+    if file_type == "thermalRaw":
+        raw_file = meta_file.with_suffix(".cptv")
+    else:
+        raw_file = meta_file.with_suffix(".m4a")
+    if raw_file.exists():
+        return
+    raw_file.parent.mkdir(exist_ok=True, parents=True)
+    s3_queue.put((rec_id, str(raw_file), f"objectstore/prod/{raw_file_key}"))
 
 
 def save_rec(rec, out_dir, s3_queue, file_type):
-    # session timezone is UTC (see connect_to_db) to match cptv-download.py
-    dtstring = rec["recordingDateTime"].strftime("%Y%m%d-%H%M%S")
-    # match old cptv-download so dont redl files
-    file_base = f'{rec["id"]}-{dtstring}-{rec["deviceName"]}.txt'
-    # str(rec["id"]) + "-" + dtstring + "-" + r["deviceName"]
-    out_folder = get_distributed_folder(file_base)
-    out_file = out_dir / out_folder / file_base
+    out_file = meta_file_path(
+        out_dir, rec["id"], rec["recordingDateTime"], rec["deviceName"]
+    )
     logging.debug("Writing to %s", out_file)
     out_file.parent.mkdir(exist_ok=True, parents=True)
     with out_file.open("w") as f:
         json.dump(rec, f, indent=4, cls=CustomJSONEncoder)
-    if file_type == "thermalRaw":
-        out_file = out_file.with_suffix(".cptv")
-    else:
-        out_file = out_file.with_suffix(".m4a")
-    if out_file.exists():
-        return
-    s3_queue.put((str(out_file), f'objectstore/prod/{rec["rawFileKey"]}'))
+    queue_raw_file(rec["id"], rec["rawFileKey"], out_file, s3_queue, file_type)
 
 
 def get_track_data(s3, bucket_name, track_id):
