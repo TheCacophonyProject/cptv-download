@@ -60,9 +60,17 @@ def main():
         print("DB file already exists ", save_file)
     else:
         bucket.download_file(latest_file, save_file)
-        print(f'Downloaded too {save_file} linking to {download_dir / "latest.pgdump"}')
-        link_f = download_dir / "latest.pgdump"
-        os.symlink(save_file, link_f)
+        print(f"Downloaded to {save_file}")
+
+    # point latest.pgdump at the newest dump, replacing any existing link.
+    # target is relative to the link's folder, so just use the file name
+    link_f = download_dir / "latest.pgdump"
+    tmp_link = download_dir / "latest.pgdump.tmp"
+    if tmp_link.is_symlink() or tmp_link.exists():
+        tmp_link.unlink()
+    os.symlink(save_file.name, tmp_link)
+    os.replace(tmp_link, link_f)
+    print(f"Linked {link_f} -> {save_file.name}")
 
     print(f"Restore with sudo -u postgres pg_restore --clean -d cacodb {save_file}")
 
