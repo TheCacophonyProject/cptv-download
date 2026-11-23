@@ -49,6 +49,18 @@ TAG_FILTERS = {
                 and "Tracks"."archivedAt" is null
                 and "Tags"."archivedAt" is null
         )""",
+    # a track where the Master AI model tagged it as noise
+    "master-noise": """
+        exists (
+            select 1 from "Tracks"
+            inner join "TrackTags" as "Tags" on "Tracks"."id" = "Tags"."TrackId"
+            where "Tracks"."RecordingId" = "Recording".id
+                and "Tracks"."archivedAt" is null
+                and "Tags"."archivedAt" is null
+                and "Tags".automatic
+                and "Tags"."model" = 'Master'
+                and "Tags"."what" = 'noise'
+        )""",
 }
 
 
@@ -67,7 +79,8 @@ def parse_args():
         "--tagged",
         choices=TAG_FILTERS.keys(),
         default="human",
-        help="human: recordings with human tags (default). any: recordings with any tagged tracks",
+        help="human: recordings with human tags (default). any: recordings with any tagged tracks. "
+        "master-noise: recordings with a track the Master model tagged as noise",
     )
     parser.add_argument("out_folder", help="Root folder to place downloaded files in.")
     args = parser.parse_args()
