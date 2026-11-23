@@ -48,36 +48,14 @@ from
 	inner join "Devices" as "Device" on
 		"Recording"."DeviceId" = "Device"."id"
 	where
-		(("Recording"."type" = '{}'
-			and ("Recording"."recordingDateTime" >= '{}')
+		(("Recording"."type" = '{type}'
+			and ("Recording"."recordingDateTime" >= '{start_date}')
 			and "Recording"."deletedAt" is null)
-		and ((
-		select
-			"Recording"."id"
-		from
-			"Tracks"
-		inner join "TrackTags" as "Tags" on
-			"Tracks"."id" = "Tags"."TrackId"
-		where
-			"Tags".
- "archivedAt" is null
-			and "Tracks"."RecordingId" = "Recording".id
-			and "Tracks"."archivedAt" is null
-			and (not "Tags".automatic)
-		limit 1) is not null
-			or (
-			select
-				1
-			from
-				"Tags"
-			where
-				"Tags"."RecordingId" = "Recording".id
-				and (not "Tags".automatic)
-			limit 1) is not null))
+		and ({tag_filter}))
 	order by
 		"recordingDateTime" desc,
 		"Recording"."id" desc
-	limit {} offset {}) as "Recording"
+	limit {limit} offset {offset}) as "Recording"
 left outer join "Groups" as "Group" on
 	"Recording"."GroupId" = "Group"."id"
 left outer join "Stations" as "Station" on
